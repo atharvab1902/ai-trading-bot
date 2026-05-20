@@ -1,0 +1,37 @@
+{
+  "trained_at": "2026-05-20T20:55:11.050141+05:30",
+  "timezone": "IST",
+  "model_type": "dual",
+  "n_stocks": 98,
+  "feature_cols": [
+    "gap_pct",
+    "vol_surge_5d",
+    "mom_30m_pct",
+    "mom_15m_pct",
+    "vol_ratio_5m",
+    "vwap_dev_pct",
+    "ema9_21_spread",
+    "rsi14_feat",
+    "atr14_pct",
+    "orb_width_pct",
+    "time_bucket",
+    "is_first_30min",
+    "is_last_hour",
+    "bars_above_vwap_pct",
+    "sym_win_rate_10",
+    "vix_level",
+    "universe_move_30m_pct",
+    "stock_vs_universe_30m",
+    "catalyst_score_feat"
+  ],
+  "threshold": 0.25,
+  "open_threshold": 0.25,
+  "mid_threshold": 0.22,
+  "old_open_threshold": 0.25,
+  "old_mid_threshold": 0.22,
+  "feedback_signals": 458,
+  "deployed": {
+    "open": true,
+    "mid": true
+  }
+}

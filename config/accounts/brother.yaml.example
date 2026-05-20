@@ -1,0 +1,26 @@
+name: brother
+mode: paper  # start in paper, switch to live only after 4+ weeks successful paper
+broker: dhan
+
+capital: 10000
+daily_loss_limit_pct: 2.0
+max_positions: 1
+max_position_size_inr: 2000
+
+watchlist:
+  - RELIANCE
+  - HDFCBANK
+  - INFY
+
+active_strategy: orb
+strategy_params:
+  orb:
+    range_minutes: 15
+    stoploss_pct: 0.5
+    target_pct: 1.0
+    entry_buffer_pct: 0.05
+
+telegram_chat_id_env: TELEGRAM_CHAT_ID
+
+market_open: "09:15"
+market_close: "15:15"

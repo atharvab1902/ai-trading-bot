@@ -1,0 +1,31 @@
+# Copy to tester.yaml and fill with real values. Never commit the real file.
+name: tester
+mode: paper  # paper | live
+broker: dhan
+
+# Capital
+capital: 10000  # INR available to this strategy
+daily_loss_limit_pct: 2.0  # auto-halt if day's PnL drops below this
+max_positions: 1
+max_position_size_inr: 2000  # per-trade cap
+
+# Universe
+watchlist:
+  - RELIANCE
+  - HDFCBANK
+
+# Strategy
+active_strategy: orb
+strategy_params:
+  orb:
+    range_minutes: 15       # opening range window
+    stoploss_pct: 0.5
+    target_pct: 1.0
+    entry_buffer_pct: 0.05  # breakout must exceed range high/low by this
+
+# Notifications
+telegram_chat_id_env: TELEGRAM_CHAT_ID  # reads from .env
+
+# Trading window (IST)
+market_open: "09:15"
+market_close: "15:15"  # square-off 15 min before actual close
