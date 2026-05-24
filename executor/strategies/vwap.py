@@ -113,7 +113,7 @@ class VWAP:
                 f"VWAP long: price {deviation_pct:.2f}% below VWAP Rs{vwap:.2f}"
             )
 
-        if self.allow_short and deviation_pct >= self.entry_threshold_pct and not momentum_up:
+        if self.allow_short and deviation_pct > 0 and deviation_pct >= self.entry_threshold_pct and not momentum_up:
             entry = price
             sl = entry * (1 + self.sl_pct / 100)
             tgt = vwap * 0.999
