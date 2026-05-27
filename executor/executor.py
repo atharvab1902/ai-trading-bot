@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 
 from . import db, risk
 from .broker import make_broker
+from .candle_builder import CandleBuilder
 from .logger import setup_logging
 from .regime import detect_regime, load_regime
 from .sectors import has_sector_conflict
@@ -410,6 +411,7 @@ def main():
 
     # Load ML scorer once at startup
     ml_scorer = MLScorer()
+    candle_builder = CandleBuilder()
 
     # Load today's scanner watchlist (replaces fixed config watchlist)
     active_watchlist, catalyst_map = load_scanner_watchlist(cfg)
@@ -490,6 +492,7 @@ def main():
                 eod_sent = True
                 for strat in strategies.values():
                     strat.reset_for_new_day()
+                candle_builder.reset()
                 log.info("EOD done. Waiting for next session.")
 
             # Reset eod_sent at market open so next day works correctly
@@ -546,20 +549,24 @@ def main():
                          f"catalyst={r['catalyst_score']} | outcome={outcome} "
                          f"(entry={r['entry']:.2f} -> {r['outcome_price']:.2f})")
 
-            # Update rolling price history for regime detection + ML scorer
+            # Update rolling price history for regime detection + real 1-min candles
             for sym, q in quotes.items():
                 if q.ltp > 0:
                     buf = quotes_history.setdefault(sym, [])
                     buf.append(q.ltp)
                     if len(buf) > 360:
                         buf.pop(0)
-                    # Feed 1-min bar to ML scorer (builds feature state)
-                    ml_scorer.update(sym, {
-                        "ts":     now_ist.replace(tzinfo=None),
-                        "open":   q.ltp, "high": q.ltp,
-                        "low":    q.ltp, "close": q.ltp,
-                        "volume": getattr(q, "volume", 0),
-                    })
+                    # Build real 1-min OHLCV candle from poll data.
+                    # cum_volume is Dhan's cumulative day volume — CandleBuilder
+                    # diffs it per-minute to get actual candle volume.
+                    bar_completed = candle_builder.update(
+                        sym, q.ltp, q.volume, now_ist.replace(tzinfo=None)
+                    )
+                    if bar_completed:
+                        # A full 1-min bar just closed — feed it to the ML scorer
+                        bars = candle_builder.get_all_bars(sym)
+                        if bars:
+                            ml_scorer.update(sym, bars[-2] if len(bars) >= 2 else bars[-1])
 
             # Re-detect regime every 30 loops (~2.5 min)
             if loop_count % 30 == 0 and quotes_history:
