@@ -376,6 +376,39 @@ def send_eod_summary(account: str, capital: float, tg: Telegram):
     )
 
 
+def _check_dhan_token(broker, tg: Telegram) -> bool:
+    """
+    Validates the Dhan access token at startup.
+    Dhan tokens expire every 24h — this catches expiry before market open
+    and fires a Telegram alert so the user knows to refresh .env.
+    Returns True if token is valid, False if expired/invalid.
+    """
+    from .broker import DhanBroker, PaperBroker
+    live = broker.live if isinstance(broker, PaperBroker) else broker
+    if not isinstance(live, DhanBroker):
+        return True  # paper-only mode with no live broker — skip check
+
+    try:
+        resp = live.client.get_fund_limits()
+        if resp and resp.get("status") == "success":
+            log.info("Dhan token OK")
+            return True
+        err = str(resp)
+        log.error(f"Dhan token check failed: {err}")
+        tg.send(
+            "TOKEN EXPIRED — bot cannot start.\n"
+            "1. Go to https://developer.dhan.co\n"
+            "2. Generate a new access token\n"
+            "3. Update DHAN_ACCESS_TOKEN in your .env file\n"
+            "4. Restart the bot"
+        )
+        return False
+    except Exception as e:
+        log.error(f"Dhan token check error: {e}")
+        tg.send(f"TOKEN CHECK FAILED: {e}\nUpdate DHAN_ACCESS_TOKEN in .env and restart.")
+        return False
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--account", required=True)
@@ -395,6 +428,13 @@ def main():
 
     tg = Telegram()
     broker = make_broker(cfg)
+
+    # Validate Dhan token before doing anything else.
+    # Token expires every 24h — catch it here so user gets a Telegram alert
+    # before market opens rather than discovering it mid-session.
+    _token_ok = _check_dhan_token(broker, tg)
+    if not _token_ok:
+        raise SystemExit("Dhan token invalid or expired — update DHAN_ACCESS_TOKEN in .env")
 
     enabled = cfg.get("strategies_enabled", [cfg["active_strategy"]])
     strategies = {}
