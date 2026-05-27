@@ -171,13 +171,12 @@ def in_market_hours(cfg: dict) -> bool:
     return open_t <= now <= close_t
 
 
-def is_squareoff_time(cfg: dict) -> bool:
+def is_past_market_close(cfg: dict) -> bool:
+    """True any time at or after market close — survives restarts after 15:15."""
     now = ist_now()
     close_h, close_m = map(int, str(cfg["market_close"]).split(":"))
     close_t = now.replace(hour=close_h, minute=close_m, second=0, microsecond=0)
-    # Use a 10-minute window so a slow loop tick never misses squareoff
-    from datetime import timedelta
-    return close_t <= now <= close_t + timedelta(minutes=10)
+    return now >= close_t
 
 
 def load_scanner_watchlist(cfg: dict) -> tuple[list, dict]:
@@ -482,16 +481,10 @@ def main():
             except Exception as e:
                 log.error(f"Config reload error: {e}")
 
-            if not in_market_hours(cfg):
-                # Heartbeat every 5 minutes while waiting
-                if loop_count % 60 == 1:
-                    log.info(f"Outside market hours | {now_ist.strftime('%H:%M:%S IST')} weekday={now_ist.weekday()}")
-                time.sleep(args.loop_seconds)
-                continue
-
-            # Square-off at close
-            if is_squareoff_time(cfg) and not eod_sent:
-                log.info("SQUAREOFF TIME — closing all positions")
+            # Square-off — checked BEFORE market-hours gate so a restart after
+            # 15:15 still closes any lingering positions on the first loop tick
+            if is_past_market_close(cfg) and not eod_sent:
+                log.info("SQUAREOFF — market closed, closing all open positions")
                 squareoff_all(args.account, broker, tg, args.dry_run)
                 send_eod_summary(args.account, cfg["capital"], tg)
                 eod_sent = True
@@ -499,11 +492,16 @@ def main():
                     strat.reset_for_new_day()
                 log.info("EOD done. Waiting for next session.")
 
-            if now_ist.hour == 0 and now_ist.minute == 0:
-                eod_sent = False
-
+            # Reset eod_sent at market open so next day works correctly
             if now_ist.hour == 9 and now_ist.minute == 15:
                 eod_sent = False
+
+            if not in_market_hours(cfg):
+                # Heartbeat every 5 minutes while waiting
+                if loop_count % 60 == 1:
+                    log.info(f"Outside market hours | {now_ist.strftime('%H:%M:%S IST')} weekday={now_ist.weekday()}")
+                time.sleep(args.loop_seconds)
+                continue
 
             # Reload scanner watchlist on new day or at 9:15 open
             if now_ist.date() != last_watchlist_date:
