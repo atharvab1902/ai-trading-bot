@@ -12,9 +12,12 @@ import pytz
 import yaml
 from dotenv import load_dotenv
 
+import queue
+
 from . import db, risk
 from .broker import make_broker
 from .candle_builder import CandleBuilder
+from .market_feed import MarketFeed
 from .logger import setup_logging
 from .regime import detect_regime, load_regime
 from .sectors import has_sector_conflict
@@ -412,6 +415,19 @@ def main():
     # Load ML scorer once at startup
     ml_scorer = MLScorer()
     candle_builder = CandleBuilder()
+    bar_queue: queue.Queue = queue.Queue()   # completed 1-min bars → ML scorer
+
+    # Start WebSocket market feed (free with Dhan account, no Data API sub needed)
+    import os as _os
+    _client_id    = _os.environ.get("DHAN_CLIENT_ID", "")
+    _access_token = _os.environ.get("DHAN_ACCESS_TOKEN", "")
+    feed: MarketFeed | None = None
+    if _client_id and _access_token:
+        feed = MarketFeed(_client_id, _access_token)
+        feed.start(active_watchlist, candle_builder, bar_queue)
+        log.info("MarketFeed WebSocket started — waiting for first ticks")
+    else:
+        log.warning("DHAN credentials missing — no live market feed")
 
     # Load today's scanner watchlist (replaces fixed config watchlist)
     active_watchlist, catalyst_map = load_scanner_watchlist(cfg)
@@ -511,6 +527,10 @@ def main():
                 active_watchlist, catalyst_map = load_scanner_watchlist(cfg)
                 last_watchlist_date = now_ist.date()
                 log.info(f"Watchlist refreshed for new day: {active_watchlist}")
+                # Restart feed with updated watchlist
+                if feed:
+                    bar_queue.queue.clear()
+                    feed.start(active_watchlist, candle_builder, bar_queue)
 
             # Intraday Perplexity refresh — every 90 min during market hours
             import time as _time
@@ -529,14 +549,32 @@ def main():
                 except Exception as _e:
                     log.warning(f"Intraday refresh failed (non-fatal): {_e}")
 
-            # Fetch all quotes in ONE batch API call — used for both exits and entries
-            try:
-                quotes = broker.get_quotes(active_watchlist)
-            except Exception as e:
-                log.error(f"BATCH QUOTE FAILED: {e}")
-                db.log_event(args.account, "ERROR", "quote_fail", f"batch: {e}")
+            # Get quotes from WebSocket feed (free) — no Data API subscription needed
+            if feed and feed.is_live:
+                quotes = feed.get_quotes(active_watchlist)
+                if not quotes:
+                    log.warning(f"MarketFeed connected but no quotes yet (staleness={feed.staleness_s:.0f}s)")
+                    time.sleep(args.loop_seconds)
+                    continue
+            else:
+                if feed:
+                    log.warning(f"MarketFeed stale ({feed.staleness_s:.0f}s) — waiting for reconnect")
+                else:
+                    log.error("No market feed available — check DHAN credentials")
                 time.sleep(args.loop_seconds)
                 continue
+
+            # Drain completed 1-min bars from feed thread → ML scorer
+            drained = 0
+            while not bar_queue.empty():
+                try:
+                    sym_bar, bar = bar_queue.get_nowait()
+                    ml_scorer.update(sym_bar, bar)
+                    drained += 1
+                except queue.Empty:
+                    break
+            if drained:
+                log.debug(f"ML scorer updated with {drained} completed candles")
 
             log.info(f"QUOTES | {' | '.join(f'{s}={q.ltp:.2f}' for s, q in quotes.items())}")
 
@@ -549,24 +587,14 @@ def main():
                          f"catalyst={r['catalyst_score']} | outcome={outcome} "
                          f"(entry={r['entry']:.2f} -> {r['outcome_price']:.2f})")
 
-            # Update rolling price history for regime detection + real 1-min candles
+            # Update rolling price history for regime detection
+            # (CandleBuilder + ML scorer are updated from the feed thread via bar_queue)
             for sym, q in quotes.items():
                 if q.ltp > 0:
                     buf = quotes_history.setdefault(sym, [])
                     buf.append(q.ltp)
                     if len(buf) > 360:
                         buf.pop(0)
-                    # Build real 1-min OHLCV candle from poll data.
-                    # cum_volume is Dhan's cumulative day volume — CandleBuilder
-                    # diffs it per-minute to get actual candle volume.
-                    bar_completed = candle_builder.update(
-                        sym, q.ltp, q.volume, now_ist.replace(tzinfo=None)
-                    )
-                    if bar_completed:
-                        # A full 1-min bar just closed — feed it to the ML scorer
-                        bars = candle_builder.get_all_bars(sym)
-                        if bars:
-                            ml_scorer.update(sym, bars[-2] if len(bars) >= 2 else bars[-1])
 
             # Re-detect regime every 30 loops (~2.5 min)
             if loop_count % 30 == 0 and quotes_history:
