@@ -174,8 +174,11 @@ Keep it brief and specific. Flag anything that would change intraday trade direc
             # Find surrounding context
             idx = raw_lower.find(sym.lower())
             snippet = raw[max(0, idx-50):idx+150]
-            if any(w in snippet.lower() for w in ["crash", "halt", "suspend", "results",
-                                                    "acquisition", "merger", "block deal"]):
+            if any(w in snippet.lower() for w in ["crash", "halt", "suspend",
+                                                    "acquisition", "merger", "block deal",
+                                                    "quarterly results", "q4 results", "q3 results",
+                                                    "q2 results", "q1 results", "earnings miss",
+                                                    "profit warning", "guidance cut"]):
                 result["symbol_alerts"][sym] = snippet.strip()
                 log.info(f"INTRADAY ALERT | {sym}: {snippet[:80]}")
 
