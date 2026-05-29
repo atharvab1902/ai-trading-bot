@@ -71,15 +71,28 @@ class MarketFeed:
     # ── Thread entry point ────────────────────────────────────────────────
 
     def _run_forever(self):
+        delay = 10
         while True:
             try:
                 self._connect()
+                delay = 10  # reset backoff on clean exit
             except Exception as e:
-                log.error(f"MarketFeed error: {e} — reconnecting in 10s")
+                err = str(e)
+                if "429" in err:
+                    delay = min(delay * 2, 300)  # 429 = rate limited, back off hard
+                    log.error(f"MarketFeed error: {e} — rate limited, reconnecting in {delay}s")
+                else:
+                    delay = min(delay * 2, 120)
+                    log.error(f"MarketFeed error: {e} — reconnecting in {delay}s")
             self._connected = False
-            time.sleep(10)
+            time.sleep(delay)
 
     def _connect(self):
+        import asyncio
+        # Python 3.10+ doesn't auto-create event loops in background threads
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
         try:
             from dhanhq import marketfeed
         except ImportError:
@@ -100,57 +113,67 @@ class MarketFeed:
             time.sleep(60)
             return
 
+        # Don't connect before 9:00 AM IST — Dhan rejects WebSocket before pre-open
+        now_ist = datetime.now(IST)
+        if now_ist.hour < 9:
+            wait = (9 * 60 - now_ist.hour * 60 - now_ist.minute) * 60
+            log.info(f"MarketFeed: waiting {wait//60}min until 09:00 IST before connecting")
+            time.sleep(wait)
+
         log.info(f"MarketFeed: connecting ({len(instruments)} instruments)")
         feed = marketfeed.DhanFeed(
             client_id=self.client_id,
             access_token=self.access_token,
             instruments=instruments,
             version="v2",
-            on_ticks=self._on_ticks,
         )
+        # run_forever() connects + subscribes, then returns (non-blocking after handshake)
+        feed.run_forever()
         self._connected = True
-        log.info("MarketFeed: WebSocket connected")
-        feed.run_forever()  # blocks until disconnected
+        log.info("MarketFeed: WebSocket connected, polling for ticks")
+
+        # Poll loop — get_data() blocks until next tick arrives from the server
+        while True:
+            tick = feed.get_data()
+            if tick:
+                self._on_ticks(tick)
 
     # ── Tick handler (runs in feed thread) ────────────────────────────────
 
-    def _on_ticks(self, ticks):
+    def _on_ticks(self, tick):
         now = datetime.now(IST).replace(tzinfo=None)
         self._last_tick_ts = time.time()
-        tick_list = ticks if isinstance(ticks, list) else [ticks]
 
-        for tick in tick_list:
-            try:
-                sid  = str(tick.get("security_id", ""))
-                sym  = SID_TO_SYMBOL.get(sid)
-                if not sym:
-                    continue
-                ltp = float(tick.get("LTP", 0))
-                if ltp <= 0:
-                    continue
-                atp = float(tick.get("ATP", ltp))  # ATP = intraday VWAP from Dhan
-                vol = int(tick.get("volume", 0))
+        try:
+            sid = str(tick.get("security_id", ""))
+            sym = SID_TO_SYMBOL.get(sid)
+            if not sym:
+                return
+            ltp = float(tick.get("LTP", 0))   # comes as string "1234.56" from API
+            if ltp <= 0:
+                return
+            atp = float(tick.get("avg_price", ltp))  # avg_price = intraday VWAP from Dhan
+            vol = int(tick.get("volume", 0))
 
-                with self._lock:
-                    self._raw[sym] = {
-                        "ltp": ltp, "atp": atp, "volume": vol,
-                        "high": float(tick.get("high", ltp)),
-                        "low":  float(tick.get("low",  ltp)),
-                        "open": float(tick.get("open", ltp)),
-                        "ts":   self._last_tick_ts,
-                    }
+            with self._lock:
+                self._raw[sym] = {
+                    "ltp": ltp, "atp": atp, "volume": vol,
+                    "high": float(tick.get("high", ltp)),
+                    "low":  float(tick.get("low",  ltp)),
+                    "open": float(tick.get("open", ltp)),
+                    "ts":   self._last_tick_ts,
+                }
 
-                # Feed candle builder; push completed bar to queue for ML scorer
-                if self._candle_builder is not None:
-                    completed = self._candle_builder.update(sym, ltp, vol, now)
-                    if completed and self._bar_queue is not None:
-                        bars = self._candle_builder.get_all_bars(sym)
-                        if len(bars) >= 2:
-                            # -2 = last COMPLETED bar (-1 is current partial)
-                            self._bar_queue.put_nowait((sym, bars[-2]))
+            # Feed candle builder; push completed bar to queue for ML scorer
+            if self._candle_builder is not None:
+                completed = self._candle_builder.update(sym, ltp, vol, now)
+                if completed and self._bar_queue is not None:
+                    bars = self._candle_builder.get_all_bars(sym)
+                    if len(bars) >= 2:
+                        self._bar_queue.put_nowait((sym, bars[-2]))
 
-            except Exception as e:
-                log.debug(f"MarketFeed tick error: {e}")
+        except Exception as e:
+            log.debug(f"MarketFeed tick error: {e}")
 
     # ── Public API (called from main executor thread) ─────────────────────
 

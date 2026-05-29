@@ -168,16 +168,15 @@ def update_config(account: str, stock_analysis: list, global_bias: dict):
     # Sort by sentiment — positive first
     safe_stocks.sort(key=lambda x: x["sentiment"], reverse=True)
 
-    # If global bias is risk_off, only trade top 3 positive-sentiment stocks
+    # If global bias is risk_off, only trade top-sentiment stocks
+    # Don't overwrite max_positions in config — executor uses pos_size_multiplier
+    # from strategy_override to reduce exposure on bad days
     if global_bias["bias"] == "risk_off":
-        tradeable = [s["symbol"] for s in safe_stocks if s["sentiment"] >= 0][:3]
-        cfg["max_positions"] = 1  # reduce exposure on bad days
+        tradeable = [s["symbol"] for s in safe_stocks if s["sentiment"] >= 0][:10]
     elif global_bias["bias"] == "risk_on":
         tradeable = [s["symbol"] for s in safe_stocks if s["sentiment"] >= 0]
-        cfg["max_positions"] = 3
     else:
         tradeable = [s["symbol"] for s in safe_stocks if s["sentiment"] >= 0]
-        cfg["max_positions"] = 2
 
     # If no tradeable stocks, halt today via active_strategy flag (risk.py checks this)
     if not tradeable:

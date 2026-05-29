@@ -1,0 +1,21 @@
+{
+  "description": "NSE equity segment trading holidays. Update each year from nseindia.com/resources/exchange-communication-holidays",
+  "2026": [
+    {"date": "2026-01-26", "name": "Republic Day"},
+    {"date": "2026-02-19", "name": "Chhatrapati Shivaji Maharaj Jayanti"},
+    {"date": "2026-03-03", "name": "Holi"},
+    {"date": "2026-03-19", "name": "Gudhi Padwa"},
+    {"date": "2026-03-26", "name": "Ram Navami"},
+    {"date": "2026-03-31", "name": "Id-Ul-Fitr (Ramzan Id)"},
+    {"date": "2026-04-03", "name": "Good Friday"},
+    {"date": "2026-05-01", "name": "Maharashtra Day"},
+    {"date": "2026-05-28", "name": "Bakri Id (Eid al-Adha)"},
+    {"date": "2026-06-26", "name": "Muharram"},
+    {"date": "2026-09-14", "name": "Ganesh Chaturthi"},
+    {"date": "2026-10-02", "name": "Gandhi Jayanti"},
+    {"date": "2026-10-25", "name": "Dussehra"},
+    {"date": "2026-11-01", "name": "Diwali Amavasya"},
+    {"date": "2026-11-15", "name": "Guru Nanak Jayanti"},
+    {"date": "2026-12-25", "name": "Christmas"}
+  ]
+}

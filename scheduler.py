@@ -12,6 +12,7 @@ Usage:
 """
 
 import argparse
+import json
 import subprocess
 import sys
 import time
@@ -24,6 +25,23 @@ from dotenv import load_dotenv
 REPO_ROOT = Path(__file__).parent
 IST = pytz.timezone("Asia/Kolkata")
 load_dotenv(REPO_ROOT / ".env")
+
+
+def is_market_holiday(date) -> tuple[bool, str]:
+    """Check if date is an NSE trading holiday. Returns (is_holiday, holiday_name)."""
+    holidays_path = REPO_ROOT / "data" / "nse_holidays.json"
+    if not holidays_path.exists():
+        return False, ""
+    try:
+        data = json.loads(holidays_path.read_text())
+        year_holidays = data.get(str(date.year), [])
+        date_str = date.strftime("%Y-%m-%d")
+        for h in year_holidays:
+            if h["date"] == date_str:
+                return True, h["name"]
+    except Exception:
+        pass
+    return False, ""
 
 
 LOG_DIR = REPO_ROOT / "logs"
@@ -88,6 +106,14 @@ def main():
             hm = now.hour * 100 + now.minute
             is_weekday = now.weekday() < 5
             is_sunday = now.weekday() == 6
+
+            # Market holiday check — skip all trading activity if NSE is closed
+            holiday, holiday_name = is_market_holiday(today)
+            if holiday:
+                if hm == 800:  # log once at 8 AM so it's visible at the top of the day
+                    log(f"MARKET HOLIDAY: {holiday_name} — no trading today. Resuming tomorrow.")
+                time.sleep(30)
+                continue
 
             # 08:00 — morning scanner (Perplexity + Claude Opus 4.7)
             watchlist_file = REPO_ROOT / "data" / f"watchlist_{today.strftime('%Y%m%d')}.json"
