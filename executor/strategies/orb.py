@@ -120,6 +120,14 @@ class ORB:
         self._taken = set(state.get("taken", []))
         log.info(f"ORB state loaded | range={list(self._range.keys())} taken={self._taken}")
 
+    def update_params(self, params: dict):
+        self.sl_pct = params.get("stoploss_pct", self.sl_pct)
+        self.tgt_pct = params.get("target_pct", self.tgt_pct)
+        self.buffer_pct = params.get("entry_buffer_pct", self.buffer_pct)
+        self.allow_short = params.get("allow_short", self.allow_short)
+        self.suppress_long = params.get("_strategist_suppress_long", self.suppress_long)
+        log.info(f"ORB params updated: sl={self.sl_pct} tgt={self.tgt_pct} suppress_long={self.suppress_long}")
+
     def reset_for_new_day(self):
         self._range.clear()
         self._taken.clear()

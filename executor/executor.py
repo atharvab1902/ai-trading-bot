@@ -517,7 +517,12 @@ def main():
                 if mtime != last_config_mtime:
                     cfg = load_config(args.account)
                     last_config_mtime = mtime
-                    log.info("CONFIG RELOADED")
+                    # Propagate updated strategy params to live strategy objects
+                    for sname, strat in strategies.items():
+                        new_params = cfg.get("strategy_params", {}).get(sname, {})
+                        if new_params and hasattr(strat, "update_params"):
+                            strat.update_params(new_params)
+                    log.info("CONFIG RELOADED — strategy params updated")
                     db.log_event(args.account, "INFO", "config_reload", "config reloaded")
                     tg.send(f"Config reloaded: {args.account}")
             except Exception as e:

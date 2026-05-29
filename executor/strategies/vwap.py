@@ -149,6 +149,14 @@ class VWAP:
         }
         log.info(f"VWAP state loaded | symbols={list(self._cum_vol.keys())} ticks={dict(self._ticks)}")
 
+    def update_params(self, params: dict):
+        self.entry_threshold_pct = params.get("entry_threshold_pct", self.entry_threshold_pct)
+        self.sl_pct = params.get("stoploss_pct", self.sl_pct)
+        self.tgt_pct = params.get("target_pct", self.tgt_pct)
+        self.allow_short = params.get("allow_short", self.allow_short)
+        self.cooldown_after_trade = params.get("cooldown_minutes", self.cooldown_after_trade)
+        log.info(f"VWAP params updated: threshold={self.entry_threshold_pct} sl={self.sl_pct} tgt={self.tgt_pct}")
+
     def reset_for_new_day(self):
         self._cum_price_vol.clear()
         self._cum_vol.clear()
