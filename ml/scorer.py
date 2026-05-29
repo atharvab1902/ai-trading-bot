@@ -45,8 +45,10 @@ class MLScorer:
         self._last_bars_save = 0
         self._win_rate_cache: dict = {}   # {symbol: (rate, fetch_ts)}
         self._vix_cache: tuple = (0.5, 0) # (vix_level, fetch_ts)
+        self._vol_baseline: dict = {}     # {symbol: {date_str: total_volume}}
         self._load()
         self._load_bars()
+        self._load_vol_baseline()
 
     def _load(self):
         if not MODEL_PATH.exists():
@@ -114,6 +116,41 @@ class MLScorer:
             path.write_text(json.dumps(serializable))
         except Exception as e:
             log.warning(f"ML bar cache save failed: {e}")
+        self._save_vol_baseline()
+
+    def _load_vol_baseline(self):
+        path = REPO_ROOT / "data" / "vol_baseline.json"
+        if not path.exists():
+            return
+        try:
+            self._vol_baseline = json.loads(path.read_text())
+        except Exception as e:
+            log.warning(f"vol_baseline load failed: {e}")
+
+    def _save_vol_baseline(self):
+        """Persist daily total volumes so vol_surge_5d can be computed across sessions."""
+        if not self._bars:
+            return
+        try:
+            for sym, bars in self._bars.items():
+                if not bars:
+                    continue
+                today_date = bars[-1]["ts"].date() if hasattr(bars[-1]["ts"], "date") else None
+                if today_date is None:
+                    continue
+                today_vol = sum(b.get("volume", 0) for b in bars if
+                                (b["ts"].date() if hasattr(b["ts"], "date") else None) == today_date)
+                today_str = str(today_date)
+                sym_hist = self._vol_baseline.setdefault(sym, {})
+                sym_hist[today_str] = int(today_vol)
+                # Keep only the last 10 calendar days per symbol
+                if len(sym_hist) > 10:
+                    del sym_hist[sorted(sym_hist.keys())[0]]
+            (REPO_ROOT / "data" / "vol_baseline.json").write_text(
+                json.dumps(self._vol_baseline, indent=2)
+            )
+        except Exception as e:
+            log.warning(f"vol_baseline save failed: {e}")
 
     def _reload_threshold(self):
         """Re-read all thresholds from model_meta.json every 60 seconds."""
@@ -300,7 +337,16 @@ class MLScorer:
             df["rsi14_feat"]     = df["rsi14"]
             df["atr14_pct"]      = df["atr14"] / df["close"] * 100
             df["gap_pct"]        = (df["day_open"] - df["close"].shift(1)) / df["close"].shift(1) * 100
-            df["vol_surge_5d"]   = 1.0   # not available in real-time, default to 1
+            today_date = df["date"].iloc[-1]
+            today_vol = float(df[df["date"] == today_date]["volume"].sum())
+            sym_hist = self._vol_baseline.get(symbol, {})
+            past_days = sorted(d for d in sym_hist if d != str(today_date))[-5:]
+            past_vols = [sym_hist[d] for d in past_days if sym_hist[d] > 0]
+            if len(past_vols) >= 2:
+                avg_5d = sum(past_vols) / len(past_vols)
+                df["vol_surge_5d"] = today_vol / avg_5d if avg_5d > 0 else 1.0
+            else:
+                df["vol_surge_5d"] = 1.0
             df["mom_30m_pct"]    = (df["close"] - df["close"].shift(30)) / df["close"].shift(30) * 100
             df["mom_15m_pct"]    = (df["close"] - df["close"].shift(15)) / df["close"].shift(15) * 100
             df["vol_ratio_5m"]   = df["volume"] / df["volume"].rolling(5, min_periods=1).mean()

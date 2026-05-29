@@ -28,48 +28,18 @@ strategy_params:
   vwap:
     allow_short: true
     cooldown_minutes: 5
-    entry_threshold_pct: 0.5
-    stoploss_pct: 0.3
+    entry_threshold_pct: 0.7
+    stoploss_pct: 0.5
     target_pct: 0.5
 telegram_chat_id_env: TELEGRAM_CHAT_ID
 watchlist:
-- INFY
-- TCS
-- HCLTECH
-- TECHM
+- SIEMENS
 - WIPRO
-- MPHASIS
-- PERSISTENT
-- OFSS
-- LTTS
-- TATAELXSI
-- ICICIBANK
-- HDFCBANK
-- KOTAKBANK
-- AXISBANK
-- SBIN
-- INDUSINDBK
-- RELIANCE
-- BHARTIARTL
-- ITC
-- HINDUNILVR
-- TITAN
-- MARUTI
-- TATAMOTORS
-- BAJFINANCE
-- BAJAJFINSV
-- SUNPHARMA
-- DRREDDY
-- CIPLA
-- DIVISLAB
-- NTPC
-- POWERGRID
-- ONGC
-- COALINDIA
-- TRENT
+- BOSCHLTD
+- TATACOMM
+- GAIL
 - NAUKRI
+- PAGEIND
 - DIXON
-- POLYCAB
+- ASIANPAINT
 - IRCTC
-- HDFCLIFE
-- SBILIFE

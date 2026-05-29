@@ -105,7 +105,8 @@ class VWAP:
         if deviation_pct <= -self.entry_threshold_pct and not momentum_down:
             entry = price
             sl = entry * (1 - self.sl_pct / 100)
-            tgt = vwap * 1.001
+            # Target: whichever is further — tgt_pct move OR return to VWAP
+            tgt = max(entry * (1 + self.tgt_pct / 100), vwap * 1.001)
             self._taken[symbol] = now
             log.info(f"VWAP SIGNAL BUY {symbol} entry={entry:.2f} sl={sl:.2f} tgt={tgt:.2f} dev={deviation_pct:+.3f}%")
             return Signal(
@@ -116,7 +117,8 @@ class VWAP:
         if self.allow_short and deviation_pct > 0 and deviation_pct >= self.entry_threshold_pct and not momentum_up:
             entry = price
             sl = entry * (1 + self.sl_pct / 100)
-            tgt = vwap * 0.999
+            # Target: whichever is further — tgt_pct move OR return to VWAP
+            tgt = min(entry * (1 - self.tgt_pct / 100), vwap * 0.999)
             self._taken[symbol] = now
             log.info(f"VWAP SIGNAL SELL {symbol} entry={entry:.2f} sl={sl:.2f} tgt={tgt:.2f} dev={deviation_pct:+.3f}%")
             return Signal(

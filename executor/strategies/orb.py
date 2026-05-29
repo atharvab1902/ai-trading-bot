@@ -24,6 +24,7 @@ class ORB:
         self.tgt_pct = params.get("target_pct", 1.0)
         self.buffer_pct = params.get("entry_buffer_pct", 0.05)
         self.allow_short = params.get("allow_short", False)
+        self.suppress_long = params.get("_strategist_suppress_long", False)
         self.latest_entry = params.get("latest_entry", "10:00")
 
         h, m = map(int, market_open.split(":"))
@@ -86,6 +87,9 @@ class ORB:
         )
 
         if price > long_trigger:
+            if self.suppress_long:
+                log.debug(f"{symbol} SKIP ORB LONG | _strategist_suppress_long=True")
+                return None
             entry = price
             sl = entry * (1 - self.sl_pct / 100)
             tgt = entry * (1 + self.tgt_pct / 100)
