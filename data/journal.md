@@ -1925,3 +1925,305 @@ Feedback signals used: 458
     time_bucket               0.074
     mom_15m_pct               0.060
     vwap_dev_pct              0.059
+
+## 2026-05-21 (tester)
+**Strategy:** vwap
+**Trades:** 3 (1W / 2L)
+**PnL:** +Rs21.61
+
+**Market:** Indian markets were slightly weak/volatile today, with Nifty 50 trading around the 23,600–23,900 zone and showing a cautious, range-bound tone after some early weakness. Major pressure came from broader market and banking stocks, while pockets of strength were seen in select names like IT and a few large caps.  
+
+Big themes: higher crude oil near $105/bbl and a softer rupee kept sentiment cautious, though global cues and GIFT Nifty pointed to some support.
+
+**Context:** Global bias was RISK_OFF. Skipped event-risk stocks: INDUSINDBK, CANBK.
+
+**Best trade:** MOTHERSON +Rs49.43 (TARGET)
+**Worst trade:** MOTHERSON Rs-27.83 (STOPLOSS)
+
+**Edge check:** Loss rate >60% — check if market was choppy/low-volume. Review signal quality.
+
+> WARNING: #stopped-out appears 25x in recent journal. Researcher should review stoploss width.
+
+**Tags:** #clean-exit #icicigi #loss #motherson #stopped-out #vwap #win
+
+---
+
+## 2026-05-21 (tester) [enriched]
+**Strategy:** vwap (OPEN + MID windows)
+**Trades:** 4 (1W / 2L / 1 open) — 3 closed
+**PnL:** +Rs21.61 closed (Trade 103 ICICIGI SELL still live at session end)
+**Cumulative week PnL:** +Rs21.61 (week starts 2026-05-19; prior week -Rs1025.86)
+
+**Trade breakdown:**
+
+| # | Symbol | Dir | Time | Exit | PnL | ml_prob | RSI | vwap_dev | Regime |
+|---|--------|-----|------|------|-----|---------|-----|----------|--------|
+| 100 | ICICIGI | SELL | 09:45 | SL (breakeven) | Rs0.00 | 0.5993 | 88.54 | +0.356% | CHOPPY |
+| 101 | MOTHERSON | BUY | 12:17 | TARGET | +Rs49.43 | 0.2885 | 39.2 | -0.059% | CHOPPY |
+| 102 | MOTHERSON | SELL | 13:28 | SL | -Rs27.83 | 0.4149 | 78.94 | +0.219% | CHOPPY |
+| 103 | ICICIGI | SELL | 13:48 | OPEN | — | 0.3229 | 70.0 | +0.089% | CHOPPY |
+
+**Best trade:** MOTHERSON BUY +Rs49.43 — hit TARGET; won on luck not edge (see below).
+**Worst trade:** MOTHERSON SELL -Rs27.83 — same symbol 71 min later, RSI=79, SL triggered.
+
+**What worked:** MOTHERSON BUY reached target. Strategy executed as designed — signal, sizing, target exit all correct. That is the extent of what worked.
+
+**What didn't:**
+1. Shallow deviation (T101): vwap_dev=-0.059% is the shallowest VWAP-reversion entry in the full journal — 8x below the proposed 0.5% floor. The trade won, but the mean-reversion basis was noise. Variance win, not edge.
+2. Same-symbol round-trip (T101 to T102): BUY hit TARGET at 12:17, SELL fired on the same symbol at 13:28 — 71-minute gap. No 90-minute cooldown implemented. SELL entered with RSI=79 in a CHOPPY regime; SL triggered. Classic fade-the-winner failure.
+3. Threshold rollback surfacing marginal signals: overnight change (OPEN 0.400 to 0.250, MID 0.350 to 0.220) let through T101 (ml_prob=0.2885) and T103 (ml_prob=0.3229). Both would have been blocked under prior thresholds. The system went from 0 trades yesterday to 4 today — but the added volume is below-conviction.
+4. All 4 trades in CHOPPY regime (avg_move 0.0%–0.224%). Choppy-regime VWAP gate still unimplemented — session 13+ in this state.
+
+**Edge check:** 1W / 2L closed. The single win is attributable to variance (vwap_dev far below minimum-edge floor). Both losses were structurally predictable: same-symbol cooldown absent, RSI near-overbought on T102. Low trade count + choppy regime + marginal ml_prob = variance session, not demonstrated edge.
+
+**Open risk — morning action required (2026-05-22):**
+Trade 103 ICICIGI SELL (4 qty) is live at session end. SL=1808.31, Target=1791.72, implied entry ~1799.52. Max downside ~Rs26 at SL. RSI=70 at entry, vwap_dev=0.089% (shallow), global_bias=risk_off. If price gaps above SL at open, loss locks in. Note: ml_prob=0.3229 — marginal under new thresholds, would have been blocked under prior.
+
+**Recurring patterns flagged (updated counts):**
+- `#stopped-out` — T102 MOTHERSON SELL. Running count: 26+. ATR-scaled SL still pending.
+- `#choppy-market` — All 4 trades in CHOPPY. Running count: 13+ sessions. No choppy gate.
+- `#same-symbol-cooldown` — T101 BUY to T102 SELL, 71-min gap. Running count: 3+. No cooldown.
+- `#shallow-deviation` — T101 vwap_dev=0.059%, most extreme instance in journal. Running count: 6+. 0.5% floor unimplemented.
+- `#ml-high-prob-open-failure` — T100 ICICIGI: ml_prob=0.5993 (highest today), near-open, SL at breakeven. Pattern continues.
+- `#ml-filter-weak` — T101 (0.2885) and T103 (0.3229) below old thresholds. Running count: 11+.
+- `#risk-off-buy` — T101 MOTHERSON BUY with global_bias=risk_off. Running count: 6+.
+
+**For researcher (Sunday review):**
+1. vwap_dev minimum gate: implement abs(vwap_dev_pct) >= 0.50% as hard gate. T101 at 0.059% is the poster-child case — won by luck, not reversion.
+2. Same-symbol cooldown: 90-minute block after any exit. T101 to T102 round-trip cost Rs27.83 with zero additional signal value.
+3. Choppy-regime gate: suppress VWAP signals when avg_move < 0.25% for trailing 10 bars. 13+ sessions of evidence.
+4. ML threshold rollback: first session under new thresholds produced marginal ml_probs of 0.2885 and 0.3229. Track expectancy vs old thresholds over next 5 sessions before declaring rollback correct.
+5. OPEN-window RSI gate: T100 (ml_prob=0.5993, near-open, breakeven) continues high-confidence open signal failure. Consider RSI < 60 / RSI > 40 gate for OPEN window, or restrict to first 15 min only.
+
+**Tags:** #vwap #choppy-market #flat #stopped-out #shallow-deviation #same-symbol-cooldown #ml-filter-weak #ml-high-prob-open-failure #risk-off-buy #icicigi #motherson
+
+---
+---
+## ML Retrain — 2026-05-21 16:04 IST (IST)
+Feedback signals used: 461
+
+### OPEN window | deployed=YES | threshold 0.250 -> 0.250
+  long/sharpe: -14.03 -> -14.021
+  long/win_rate: 0.299 -> 0.299
+  long/n_signals: 85909 -> 85834
+  short/sharpe: -12.074 -> -12.084
+  short/win_rate: 0.337 -> 0.337
+  short/n_signals: 83141 -> 83115
+
+### MID window | deployed=YES | threshold 0.220 -> 0.220
+  long/sharpe: -19.885 -> -19.885
+  long/win_rate: 0.22 -> 0.22
+  long/n_signals: 440548 -> 440506
+  short/sharpe: -20.692 -> -20.694
+  short/win_rate: 0.225 -> 0.225
+  short/n_signals: 440314 -> 440483
+
+### Feature importance
+  OPEN_LONG — top 5 features:
+    is_first_30min            0.212
+    atr14_pct                 0.183
+    vol_surge_5d              0.107
+    orb_width_pct             0.080
+    mom_15m_pct               0.062
+
+  OPEN_SHORT — top 5 features:
+    atr14_pct                 0.248
+    is_first_30min            0.205
+    time_bucket               0.096
+    orb_width_pct             0.075
+    mom_15m_pct               0.059
+
+  MID_LONG — top 5 features:
+    atr14_pct                 0.460
+    mom_15m_pct               0.088
+    orb_width_pct             0.072
+    mom_30m_pct               0.067
+    ema9_21_spread            0.055
+
+  MID_SHORT — top 5 features:
+    atr14_pct                 0.465
+    is_last_hour              0.075
+    time_bucket               0.073
+    mom_30m_pct               0.060
+    vwap_dev_pct              0.058
+
+## 2026-05-22 (tester)
+**Strategy:** vwap
+**Trades:** 8 (1W / 7L)
+**PnL:** Rs-28.37
+
+**Market:** Indian markets are trading with a cautiously positive-to-range-bound tone, with Nifty 50 trying to hold above the 23,700–23,800 zone; a close above 23,900 would strengthen the upside, while 23,600 remains near-term support. Big movers have been banks and IT names on the upside, while some auto, steel and select industrial stocks have been weak; broader sentiment is being helped by easing crude oil prices and hopes around U.S.–Iran talks.
+
+**Context:** Global bias was RISK_ON. Skipped event-risk stocks: JSWSTEEL.
+
+**Best trade:** OBEROIRLTY +Rs69.21 (TARGET)
+**Worst trade:** VEDL Rs-27.64 (STOPLOSS)
+
+**Edge check:** Loss rate >60% — check if market was choppy/low-volume. Review signal quality.
+
+> WARNING: #stopped-out appears 29x in recent journal. Researcher should review stoploss width.
+
+**Tags:** #astral #clean-exit #jublfood #loss #naukri #oberoirlty #piind #stopped-out #vedl #vwap #win
+
+---
+
+## 2026-05-22 (tester) [enriched]
+**Strategy:** vwap (OPEN + MID windows; mode: paper)
+**Trades:** 8 (1W / 4L / 3 breakeven — breakevens labeled STOPLOSS with PnL=Rs0)
+**PnL:** -Rs28.37
+**Cumulative week PnL:** -Rs6.76 (2026-05-21 +Rs21.61, today -Rs28.37; T103 ICICIGI carry-in excluded if closed pre-session)
+**Market:** Nifty 50 range-bound 23,700–23,800. Global bias RISK_ON. FII net -Rs1891 Cr (BEARISH — contradicts RISK_ON label; recurring data inconsistency). VIX ~17.82 (NORMAL). JSWSTEEL skipped (event risk). Crude easing, US-Iran talks providing sentiment support. Nifty holding above 23,600 support.
+
+**Trade breakdown:**
+
+| # | id | Time | Symbol | Side | PnL | Exit | ml_prob | RSI | bars_abv_vwap | vwap_dev | consec_at_entry | regime | cat_dir | cat_score |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 104 | 1 | 09:56 | VEDL | BUY | -Rs27.64 | STOPLOSS | 0.344 | 21.7 | 63% | -0.55% | 0 | CHOPPY | NEUTRAL | 3 |
+| 105 | 2 | 10:09 | PIIND | SELL | -Rs19.40 | STOPLOSS | 0.298 | 83.8 | 100% | +0.60% | 1 | CHOPPY | NEUTRAL | 2 |
+| 106 | 3 | 10:56 | OBEROIRLTY | SELL | -Rs23.10 | STOPLOSS | 0.445 | 80.0 | 83% | +0.57% | 2 | CHOPPY | NEUTRAL | 2 |
+| 107 | 4 | 11:43 | VEDL | BUY | Rs0.00 | STOPLOSS-BE | 0.252 | 44.4 | 17% | -0.73% | 3 | CHOPPY | NEUTRAL | 3 |
+| 108 | 5 | 12:16 | JUBLFOOD | SELL | Rs0.00 | STOPLOSS-BE | 0.236 | 46.7 | 53% | -0.07% | 3 | CHOPPY | SHORT | 8 |
+| 109 | 6 | 12:19 | ASTRAL | SELL | Rs0.00 | STOPLOSS-BE | 0.232 | 39.1 | 100% | +0.07% | 3 | CHOPPY | SHORT | 4 |
+| 110 | 7 | 12:37 | OBEROIRLTY | SELL | +Rs69.21 | TARGET | 0.433 | 66.7 | 57% | +1.08% | 4 | CHOPPY | NEUTRAL | 2 |
+| 111 | 8 | 13:22 | NAUKRI | SELL | -Rs27.44 | STOPLOSS | 0.641 | 56.6 | 97% | +4.46% | 5 | CHOPPY | SHORT | 4 |
+
+**Best trade:** OBEROIRLTY SELL +Rs69.21 (Trade 110) — second entry on this symbol, rr_ratio=3.61, 1.08% above VWAP. Entered with consec=4 which the soft-pause should have blocked; the win is real but the process was wrong. The first OBEROIRLTY entry (#106) took the loss that "earned" this setup — the pair is not a clean edge demonstration.
+
+**Worst trade:** VEDL BUY -Rs27.64 (Trade 104) — VWAP long with RSI=21.7 (extreme oversold) in CHOPPY regime. ml_prob=0.344 is adequate. The loss is the smallest of the day in absolute terms, but VEDL continues a documented pattern (6th recurrence, 2nd time today) that the system has never addressed structurally.
+
+---
+
+**Pattern analysis:**
+
+**1. VEDL sixth recurrence — empirical win rate 12.5% (1/8), bot keeps entering**
+
+VEDL has now appeared in trades on 2026-04-30, 2026-05-06, 2026-05-07 (x2), and today (x2: Trades 104 and 107). Trade 107 fired with consec=3, explicitly past the soft-pause threshold. sym_win_rate_10=0.125 — one win in the last eight VEDL entries. The system has no per-symbol win-rate gate. A symbol-level filter suppressing entry when recent-window win rate < 25% would have blocked Trade 107 independently of the consec gate. VEDL is the single most repeated losing symbol in this journal. This is a watchlist composition problem as much as a filter problem.
+
+**2. PIIND bars_above_vwap=100% + RSI=83.8 — RSI gate logic gap confirmed**
+
+PIIND SELL fired with RSI=83.8 and bars_above_vwap=100% — price in unambiguous uptrend. The config has rsi_sell_block=25 (blocks SELL when RSI <= 25, i.e. oversold protection) and rsi_buy_block=75 (blocks BUY when RSI >= 75). Neither gate applies here: RSI=83.8 on a SELL is not caught by either threshold. This is a structural logic gap — the current RSI gates protect against selling into oversold conditions and buying into overbought conditions, but do not protect against the mirror case: shorting into overbought momentum (RSI=83.8) or buying into oversold momentum. A complementary gate blocking SELL when RSI >= 75 would have prevented PIIND. This pattern also appeared in M&M on 2026-04-30 (bars_above_vwap=100%) and OFSS/SAIL on 2026-05-18 (RSI=92/93). The tag `#bars-above-vwap-momentum-conflict` applies to PIIND and ASTRAL (100% bars_above_vwap, Trade 109) today.
+
+**3. Consecutive-loss escalation to consec=5 without halting — dominant story of the session**
+
+The soft-pause at consec >= 2 has been CRITICAL/unimplemented since 2026-04-30 (session 22+). Today the escalation reached consec=5 at Trade 111 entry, with halt_after_consecutive_losses=7. The sequence:
+- Trade 104: consec=0 at entry, SL (-Rs27.64) → consec=1
+- Trade 105: consec=1 at entry, SL (-Rs19.40) → consec=2
+- Trade 106: consec=2 at entry, SL (-Rs23.10) → consec=3
+- Trade 107: consec=3 at entry, BE (Rs0.00) → consec reset to 0 per trailing SL? Or stayed at 3? (STOPLOSS label with PnL=0 — ambiguous. If counted as loss: consec=4)
+- Trade 108: consec=3+ at entry, BE (Rs0.00) → same ambiguity
+- Trade 109: consec=3+ at entry, BE (Rs0.00)
+- Trade 110: consec=4 at entry, TARGET → reset to 0
+- Trade 111: consec=5 at entry (from subsequent losses post-110? The notes say consec=5 at 13:22 after Trade 110 hit TARGET — this implies the bot is not correctly resetting consec on breakeven exits, or the TARGET count reset was itself corrupted. Regardless: 5 consecutive counting events without halt at halt_after=7 means the strategy will trade through 2 more losing signals before any system-level stop.)
+
+A soft-pause at consec >= 2 would have blocked Trades 106, 107, 108, 109, and 111 — five of eight trades. The three trades it would have permitted (104, 105, 110) produced net: -Rs27.64 -Rs19.40 +Rs69.21 = +Rs22.17. The day would have been marginally green under the soft-pause. This is the clearest cost calculation in the journal for this single unimplemented gate.
+
+**4. NAUKRI — anomalous rr_ratio, highest ml_prob, still lost**
+
+Trade 111 presents every surface metric of a high-quality signal: ml_prob=0.641 (highest of the session and among the highest in the full journal), catalyst="CFO resigned after 12 years" (genuine catalyst), vwap_dev=+4.46% (far above 0.50% floor, not shallow), cat_score=4. Yet the rr_ratio=14.56 is mechanically anomalous — with SL=0.3% and target=4.368%, the implied target distance is 14.56x the SL. This is not a curated risk/reward; it is a feature artifact of the extreme deviation (4.46% above VWAP with a fixed 0.3% SL). A 4.46% extension in a CHOPPY regime (avg_move ~0%) is outlier noise that the ML model is treating as a high-confidence reversion setup. The model likely learned that large vwap_dev correlates with reversion in trending regimes but does not condition on regime type. In CHOPPY, a 4.46% extension means the stock is in a strong single-session momentum move — not a candidate for VWAP reversion. The trade lost. `#ml-high-prob-open-failure` is not the right tag here (not at open), but `#choppy-market` + `#ml-filter-weak` apply: the ML model is overconfident on outlier-deviation CHOPPY entries.
+
+**5. OBEROIRLTY double entry — same-symbol cooldown absent (3rd occasion this journal for this exact symbol)**
+
+Trades 106 (10:56, SELL, SL) and 110 (12:37, SELL, TARGET) are the same symbol, same direction, 101 minutes apart. No 90-minute same-symbol cooldown is implemented. Net OBEROIRLTY PnL: +Rs46.11. But Trade 110 fired with consec=4, which two separate unimplemented gates (soft-pause at consec >= 2, same-symbol cooldown) should have blocked. The profit does not validate the process. OBEROIRLTY previously appeared on 2026-05-12 (0W/2L on that date for this symbol). The symbol keeps returning to the signal queue in CHOPPY conditions.
+
+**6. FII net -Rs1891 Cr vs global_bias=risk_on — recurring data inconsistency (4th+ flag)**
+
+FII net is net-bearish while the session label is RISK_ON. This inconsistency has been noted on 2026-05-19 (FII=-2457 Cr, RISK_ON), 2026-05-20 (FII=-2457 Cr carry-in), and now today. The global_bias label appears sourced from overnight US/Asia futures while FII net reflects domestic institutional flow from the prior session. The two data streams are not always aligned. Three SELL entries today were taken in a session where domestic institutions were net-selling at -Rs1891 Cr — which structurally supports the short side — yet the RISK_ON label nominally creates a friction against SELL suppression. The FII/global_bias feed requires reconciliation to determine which signal should dominate the directional gate.
+
+**7. JUBLFOOD catalyst_score=8 SHORT + ml_prob=0.236 — breakeven on a well-aligned catalyst**
+
+Trade 108: catalyst="profit beat rejected; -7.8% on results day, gapping down -4.6% on 14.6x vol — institutional distribution." This is among the strongest catalyst descriptions in the journal (score=8 SHORT). Yet ml_prob=0.236 is below the old 0.250 OPEN threshold and barely above the new 0.220 MID threshold. The trade broke even. A strong fundamental catalyst with a weak ML confidence score is a recurring tension — the ML model does not heavily weight the catalyst_score feature, while the newsdesk is generating high-quality directional signals. The gap between catalyst quality and ml_prob output suggests the model's feature vector underweights or excludes catalyst_score. The breakeven is neither a validation nor a refutation — it is an inconclusive data point on a structurally interesting tension.
+
+**8. ASTRAL vwap_dev=+0.07% + bars_above_vwap=100% — another shallow-deviation entry**
+
+Trade 109: vwap_dev=+0.07% is well below the proposed 0.50% floor. bars_above_vwap=100% means price is in unambiguous uptrend. Shorting a stock with 100% of bars above VWAP and only 0.07% extension is not a VWAP reversion setup — there is no meaningful deviation to revert from. The RSI=39.1 is neutral and does not support the short side. Trade broke even (trailing SL). The 0.50% vwap_dev floor would have blocked this entry. `#shallow-deviation` count now 7+.
+
+---
+
+**Recurring patterns (updated counts):**
+
+| Pattern | Count (updated) | Note |
+|---|---|---|
+| `#stopped-out` | 27+ | T104, T105, T106, T111 today; ATR-scaled SL overdue |
+| `#choppy-market` | 14+ sessions | All 8 trades today in CHOPPY; no regime gate |
+| `#consecutive-loss-breach` | 7+ sessions | consec reached 5 today without halt; gate unimplemented since 2026-04-30 |
+| `#vedl-repeat` | 6 instances (2026-04-30, 05-06, 05-07 x2, 05-22 x2) | sym_win_rate_10=12.5%; no per-symbol win-rate gate |
+| `#ml-filter-weak` | 12+ | ml_prob=0.236 (T108), 0.232 (T109) passed; NAUKRI 0.641 failed |
+| `#same-symbol-cooldown` | 4+ instances | OBEROIRLTY x2 (106, 110); VEDL x2 (104, 107) today |
+| `#shallow-deviation` | 7+ | JUBLFOOD 0.07%, ASTRAL 0.07% today; 0.5% floor unimplemented |
+| `#bars-above-vwap-momentum-conflict` | 4+ | PIIND 100% + RSI=83.8; ASTRAL 100% today |
+| `#losing-day` | 7 | -Rs28.37 today |
+| `#ml-high-prob-open-failure` | 4+ | NAUKRI ml_prob=0.641 (not at open, but highest session, failed) — separate but related |
+| `#rsi-gate-logic-gap` | NEW (2026-05-22) | rsi_sell_block=25 doesn't block shorting into overbought RSI=83.8 (PIIND) |
+
+---
+
+**Edge check:** 1W/4L/3BE with net -Rs28.37 is a losing day on paper. The single win (OBEROIRLTY T110) fired with consec=4 — the soft-pause should have blocked it. The three breakevens reflect the trailing SL functioning correctly, not signal quality. The four losses include two structurally weak setups (PIIND momentum-conflict, ASTRAL shallow deviation), one recurring-symbol problem (VEDL), and one anomalous ML-overconfident signal (NAUKRI). Under the soft-pause at consec >= 2, only Trades 104, 105, and 110 would have fired: net +Rs22.17. The difference between -Rs28.37 and +Rs22.17 is the direct cost of the unimplemented consec gate on this single session. This is variance on the sign (near-flat vs prior session losses) but not variance on the process — the same structural failures fired for the 14th+ consecutive session.
+
+---
+
+**For researcher (carry-forward and new from today):**
+
+Carry-forward (CRITICAL — all unimplemented since dates noted):
+- **CRITICAL (14+ sessions): Consecutive_losses soft-pause at consec >= 2.** Reached consec=5 today without halt. Cost delta vs implemented: +Rs50.54 swing on this session alone. Highest-priority unimplemented gate in the journal.
+- **CRITICAL (14+ sessions): Same-symbol intra-day cooldown (90-min post-SL).** VEDL and OBEROIRLTY both re-entered today. VEDL has 6 total instances across sessions.
+- **CRITICAL (10+ sessions): vwap_dev floor 0.50%.** JUBLFOOD (0.07%), ASTRAL (0.07%) today. Would have blocked both.
+- **CRITICAL (14+ sessions): Choppy-regime VWAP gate.** 14+ sessions, 100% of trades in CHOPPY. Strategy has never halted or reduced size for choppy conditions.
+- **CRITICAL (10+ sessions): Catalyst_reason keyword parser.** Not the primary failure today, but unimplemented.
+- **Per-symbol win-rate gate:** block entry when sym_win_rate_10 < 0.25. VEDL at 0.125 is the clearest case.
+
+New from today:
+- **RSI gate logic gap (NEW, CRITICAL):** rsi_sell_block=25 only protects against selling oversold stocks. It does NOT block shorting into overbought conditions (RSI >= 75). A symmetric gate is needed: block SELL when RSI >= 75 (mirrors rsi_buy_block=75 logic). Would have prevented PIIND (RSI=83.8) and OBEROIRLTY T106 (RSI=80). Implement as rsi_buy_block=75 / rsi_sell_block_high=75 (rename existing rsi_sell_block=25 to rsi_sell_block_low=25 for clarity).
+- **ML model regime-conditioning gap:** NAUKRI ml_prob=0.641 with vwap_dev=4.46% in CHOPPY — the model treats large VWAP deviation as a high-confidence reversion signal regardless of regime. In CHOPPY, extreme deviation is momentum noise, not reversion setup. Add regime as a feature to the ML input vector, or gate out vwap_dev > 3.0% in CHOPPY regime as an outlier exclusion.
+- **Clarify breakeven consec counting:** Trades 107–109 exited as STOPLOSS-BE (PnL=Rs0). The consec counter appears to be counting these as losses (consec reached 5 after Trade 110's TARGET). If BEs do not reset consec, the soft-pause implementation needs explicit handling: breakeven = reset? Or hold count? Define the rule before implementation.
+
+**Tags:** #vwap #choppy-market #losing-day #consecutive-loss-breach #same-symbol-cooldown #vedl-repeat #shallow-deviation #bars-above-vwap-momentum-conflict #rsi-gate-logic-gap #ml-filter-weak #stopped-out #fakeout #oberoirlty #vedl #piind #naukri #jublfood #astral #low-volume
+
+---
+---
+## ML Retrain — 2026-05-22 16:05 IST (IST)
+Feedback signals used: 463
+
+### OPEN window | deployed=YES | threshold 0.250 -> 0.250
+  long/sharpe: -13.793 -> -13.783
+  long/win_rate: 0.301 -> 0.301
+  long/n_signals: 85774 -> 85865
+  short/sharpe: -12.62 -> -12.633
+  short/win_rate: 0.326 -> 0.326
+  short/n_signals: 82708 -> 82764
+
+### MID window | deployed=YES | threshold 0.220 -> 0.220
+  long/sharpe: -20.254 -> -20.254
+  long/win_rate: 0.215 -> 0.215
+  long/n_signals: 440797 -> 440809
+  short/sharpe: -20.696 -> -20.696
+  short/win_rate: 0.224 -> 0.224
+  short/n_signals: 440740 -> 440764
+
+### Feature importance
+  OPEN_LONG — top 5 features:
+    is_first_30min            0.196
+    atr14_pct                 0.187
+    vol_surge_5d              0.105
+    orb_width_pct             0.080
+    mom_15m_pct               0.062
+
+  OPEN_SHORT — top 5 features:
+    atr14_pct                 0.252
+    is_first_30min            0.167
+    time_bucket               0.110
+    orb_width_pct             0.079
+    mom_15m_pct               0.064
+
+  MID_LONG — top 5 features:
+    atr14_pct                 0.456
+    mom_15m_pct               0.085
+    orb_width_pct             0.071
+    mom_30m_pct               0.067
+    ema9_21_spread            0.050
+
+  MID_SHORT — top 5 features:
+    atr14_pct                 0.462
+    is_last_hour              0.085
+    time_bucket               0.070
+    mom_30m_pct               0.066
+    mom_15m_pct               0.054

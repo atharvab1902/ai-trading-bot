@@ -28,7 +28,7 @@ strategy_params:
   vwap:
     allow_short: true
     cooldown_minutes: 5
-    entry_threshold_pct: 0.7
+    entry_threshold_pct: 0.5
     stoploss_pct: 0.5
     target_pct: 0.5
 telegram_chat_id_env: TELEGRAM_CHAT_ID
