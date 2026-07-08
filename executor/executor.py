@@ -646,8 +646,14 @@ def main():
                     _save_refresh_state({"last_intraday_refresh": _now_ts})
                     if intraday_context.get("macro_shock"):
                         log.warning("MACRO SHOCK detected — tightening entry gate")
+                        fire_floor_manager("NEWS_SHOCK",
+                                           {"source": "intraday_refresh",
+                                            "detail": intraday_context.get("macro_shock_detail", "")}, tg)
                     if intraday_context.get("commodity_shock"):
                         log.warning("COMMODITY SHOCK detected — commodity stocks flagged")
+                        fire_floor_manager("NEWS_SHOCK",
+                                           {"source": "commodity_shock",
+                                            "detail": intraday_context.get("commodity_shock_detail", "")}, tg)
                 except Exception as _e:
                     log.warning(f"Intraday refresh failed (non-fatal): {_e}")
 
@@ -698,6 +704,10 @@ def main():
                 try:
                     regime_data = detect_regime(quotes_history, account=args.account)
                     log.info(f"REGIME UPDATED | {regime_data['regime']} | {regime_data['reason']}")
+                    if regime_data.get("regime") == "high_volatility":
+                        fire_floor_manager("VOLATILITY_SPIKE",
+                                           {"regime": regime_data["regime"],
+                                            "reason": regime_data.get("reason", "")}, tg)
                 except Exception as e:
                     log.error(f"Regime detection error: {e}")
 
@@ -732,7 +742,15 @@ def main():
             entry_check = risk.can_open_new_position(cfg)
             open_ct = db.open_positions_count(args.account)
             open_by_symbol = db.open_positions_by_symbol(args.account)
-            today_pnl = db.today_pnl(args.account)
+            # Include unrealized PnL from open positions in daily loss calculation
+            # so we halt before realizing a full loss, not after
+            closed_pnl = db.today_pnl(args.account)
+            try:
+                open_positions = broker.get_positions()
+                unrealized_pnl = sum(p.get("unrealized_pnl", 0) for p in open_positions)
+            except Exception:
+                unrealized_pnl = 0.0
+            today_pnl = closed_pnl + unrealized_pnl
 
             # Auto-halt: too many consecutive losses → stop new entries for the day
             halt_threshold = cfg.get("halt_after_consecutive_losses", 3)

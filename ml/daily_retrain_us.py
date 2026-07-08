@@ -25,7 +25,6 @@ import numpy as np
 import pytz
 from xgboost import XGBClassifier
 from sklearn.metrics import precision_score
-from sklearn.model_selection import train_test_split
 
 from ml.features import FEATURE_COLS
 
@@ -99,12 +98,15 @@ def train_us_model(records: list[dict], old_models: dict,
     df = pd.DataFrame(records)
     n  = len(df)
 
-    # With few trades use all data; with enough, hold out 20% for eval
+    # Time-series split: train on older trades, test on most recent 20%
+    # Never shuffle — financial data has temporal structure
     if n >= 30:
-        train_df, test_df = train_test_split(df, test_size=0.2, random_state=42)
+        split_idx = int(n * 0.8)
+        train_df  = df.iloc[:split_idx].copy()
+        test_df   = df.iloc[split_idx:].copy()
     else:
         train_df = df.copy()
-        test_df  = df.copy()  # same set — weak eval but still tracks direction
+        test_df  = df.copy()
         print(f"  Only {n} trades — using full set for train+eval (no reliable holdout)")
 
     # Boost train rows 3x (each trade is hard-won real data)

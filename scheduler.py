@@ -124,12 +124,16 @@ def main():
     log(f"Market: {_open_h:02d}:{_open_m:02d}-{_close_h:02d}:{_close_m:02d} | "
         f"Scanner:{SCANNER_HM} Premarket:{PREMARKET_HM} Postmarket:{POSTMARKET_HM}")
 
-    scanner_done   = not has_scanner  # skip scanner if config says so
-    premarket_done = False
-    executor_proc  = None
+    scanner_done    = not has_scanner
+    premarket_done  = False
+    executor_proc   = None
     postmarket_done = False
-    weekly_done    = False
-    last_date      = market_now().date()
+    last_date       = market_now().date()
+    executor_crash_count = 0
+
+    # Persist weekly_done so a scheduler restart on Sunday doesn't re-run the review
+    _weekly_flag = REPO_ROOT / "data" / f"weekly_done_{market_now().date().isocalendar()[1]}.json"
+    weekly_done = _weekly_flag.exists()
 
     try:
         while True:
@@ -138,12 +142,15 @@ def main():
 
             # Reset flags at midnight (local market time) for new day
             if today != last_date:
-                scanner_done    = not has_scanner
-                premarket_done  = False
-                postmarket_done = False
-                weekly_done     = False
-                executor_proc   = None
-                last_date       = today
+                scanner_done         = not has_scanner
+                premarket_done       = False
+                postmarket_done      = False
+                executor_proc        = None
+                executor_crash_count = 0
+                last_date            = today
+                # weekly_done resets per ISO week number
+                _weekly_flag = REPO_ROOT / "data" / f"weekly_done_{today.isocalendar()[1]}.json"
+                weekly_done = _weekly_flag.exists()
                 log("New day — flags reset.")
 
             hm         = now.hour * 100 + now.minute
@@ -188,10 +195,14 @@ def main():
                     blocking=False
                 )
 
-            # Executor health check
+            # Executor health check — exponential backoff on repeated crashes
             if executor_proc and executor_proc.poll() is not None:
                 if is_weekday and MARKET_OPEN_HM <= hm <= MARKET_CLOSE_HM:
-                    log("WARNING: Executor crashed. Restarting...")
+                    executor_crash_count += 1
+                    backoff = min(30 * executor_crash_count, 300)  # 30s, 60s, ... max 5min
+                    log(f"WARNING: Executor crashed (#{executor_crash_count}). "
+                        f"Waiting {backoff}s before restart...")
+                    time.sleep(backoff)
                     executor_proc = run(
                         [sys.executable, "-m", "executor.executor",
                          "--account", args.account,
@@ -199,7 +210,7 @@ def main():
                         blocking=False
                     )
                 else:
-                    executor_proc = None  # market closed, don't restart
+                    executor_proc = None
 
             # Postmarket analysis
             postmarket_file = REPO_ROOT / "data" / f"postmarket_{args.account}_{today.strftime('%Y%m%d')}.json"
@@ -208,14 +219,8 @@ def main():
             if is_weekday and hm >= POSTMARKET_HM and not postmarket_done:
                 log("POSTMARKET: Running news summary + journal writer...")
                 run([sys.executable, "postmarket.py", "--account", args.account])
-                log("POSTMARKET: Running Claude deep analysis...")
-                run([
-                    CLAUDE_CMD, "-p",
-                    f"run postmarket for account={args.account}. "
-                    f"Read data/journal.md last entry and data/trades.db today's trades. "
-                    f"Use journaler subagent to add insights and pattern tags.",
-                    "--dangerously-skip-permissions"
-                ], shell=True)
+                log("POSTMARKET: Running intelligence analysis (Claude)...")
+                run([sys.executable, "-m", "intelligence.postmarket_analysis", args.account])
                 log("RETRAIN: Running daily ML retrainer...")
                 retrain_mod = ("ml.daily_retrain_us"
                                if cfg.get("broker", "dhan") == "alpaca"
@@ -223,17 +228,12 @@ def main():
                 run([sys.executable, "-m", retrain_mod, "--account", args.account])
                 postmarket_done = True
 
-            # Weekly Claude routine — Sunday 10:00 local market time
+            # Weekly review — Sunday 10:00 local market time
             if is_sunday and hm >= 1000 and not weekly_done:
-                log("WEEKLY: Running Claude researcher + critic + backtester...")
-                run([
-                    CLAUDE_CMD, "-p",
-                    f"run weekly for account={args.account}. "
-                    f"Read data/journal.md last 7 entries and data/trades.db last 7 days. "
-                    f"Use researcher subagent to propose improvements, then critic to review. "
-                    f"Run backtest.py on any surviving proposals. Open git PR.",
-                    "--dangerously-skip-permissions"
-                ], shell=True)
+                log("WEEKLY: Running researcher → critic → risk officer review...")
+                run([sys.executable, "-m", "intelligence.weekly_review", args.account])
+                _weekly_flag = REPO_ROOT / "data" / f"weekly_done_{today.isocalendar()[1]}.json"
+                _weekly_flag.write_text(json.dumps({"done": True, "date": str(today)}))
                 weekly_done = True
 
             time.sleep(30)

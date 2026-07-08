@@ -146,13 +146,17 @@ def write_journal(account: str, trades: list, market_summary: str, premarket_pat
     else:
         edge_note = "Mixed results — sample too small to conclude. Keep logging."
 
-    # Recurring pattern check (last 20 entries)
+    # Recurring pattern check — only last 20 journal entries
     loss_pattern_warning = ""
     if journal_path.exists():
-        content = journal_path.read_text()
-        stopped_count = content.count("#stopped-out")
+        entries = journal_path.read_text().split("## ")
+        recent_entries = "## ".join(entries[-20:]) if len(entries) > 20 else journal_path.read_text()
+        stopped_count = recent_entries.count("#stopped-out")
         if stopped_count >= 3:
-            loss_pattern_warning = f"\n> WARNING: #stopped-out appears {stopped_count}x in recent journal. Researcher should review stoploss width."
+            loss_pattern_warning = (
+                f"\n> ⚠️ #stopped-out appears {stopped_count}x in last 20 sessions. "
+                "Researcher should review stoploss width."
+            )
 
     entry = f"""
 ## {today} ({account})
@@ -186,7 +190,7 @@ def main():
     args = ap.parse_args()
 
     today_str = datetime.now(IST).strftime("%Y%m%d")
-    premarket_path = REPO_ROOT / "data" / f"premarket_{today_str}.json"
+    premarket_path = REPO_ROOT / "data" / f"premarket_{args.account}_{today_str}.json"
 
     print(f"\n{'='*50}")
     print(f"POSTMARKET — {datetime.now(IST).strftime('%Y-%m-%d %H:%M IST')}")
@@ -206,8 +210,18 @@ def main():
         args.account, trades, market_summary, premarket_path
     )
 
+    # Read actual capital from config
+    import yaml as _yaml
+    _cfg_path = REPO_ROOT / "config" / "accounts" / f"{args.account}.yaml"
+    _capital = 10000.0
+    try:
+        _cfg = _yaml.safe_load(_cfg_path.read_text())
+        _capital = float(_cfg.get("capital", 10000))
+    except Exception:
+        pass
+
     # Telegram report
-    pct = total_pnl / 10000 * 100  # assume 10k capital
+    pct = total_pnl / _capital * 100
     report = (
         f"*EOD REPORT — {args.account}*\n"
         f"Date: {datetime.now(IST).strftime('%d %b %Y')}\n\n"
