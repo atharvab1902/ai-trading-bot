@@ -123,9 +123,31 @@ def fetch_fii_data() -> dict | None:
     return None
 
 
-def load_market_context() -> dict:
+def fetch_us_vix() -> float | None:
+    """Fetch CBOE VIX (US) from Yahoo Finance."""
+    url = "https://query1.finance.yahoo.com/v8/finance/chart/%5EVIX"
+    headers = {"User-Agent": "Mozilla/5.0"}
+    try:
+        resp = requests.get(url, headers=headers, timeout=10)
+        if resp.status_code != 200:
+            log.warning(f"US VIX fetch failed: HTTP {resp.status_code}")
+            return None
+        data = resp.json()
+        result = data.get("chart", {}).get("result", [{}])[0]
+        meta = result.get("meta", {})
+        vix = meta.get("regularMarketPrice") or meta.get("previousClose")
+        if vix:
+            log.info(f"US VIX: {vix:.2f}")
+            return float(vix)
+        return None
+    except Exception as e:
+        log.warning(f"US VIX fetch error: {e}")
+        return None
+
+
+def load_market_context(account: str = "tester") -> dict:
     """Load previously saved market context (used by executor in hot path)."""
-    path = REPO_ROOT / "data" / "market_context.json"
+    path = REPO_ROOT / "data" / f"market_context_{account}.json"
     if path.exists():
         try:
             return json.loads(path.read_text())
@@ -134,20 +156,20 @@ def load_market_context() -> dict:
     return {}
 
 
-def fetch_and_save(global_bias: str = "neutral", sentiments: dict = None) -> dict:
-    """Fetch VIX + FII, merge with premarket context, save to market_context.json."""
-    ctx = load_market_context()  # keep any existing premarket data
-
-    vix = fetch_india_vix()
-    fii = fetch_fii_data()
+def fetch_and_save(global_bias: str = "neutral", sentiments: dict = None,
+                   account: str = "tester") -> dict:
+    """Fetch VIX + FII (India) or VIX only (US), save to market_context_{account}.json."""
+    ctx = load_market_context(account)
 
     ctx["ts"] = datetime.now(IST).isoformat()
     ctx["global_bias"] = global_bias
     ctx["sentiments"] = sentiments or {}
 
+    vix = fetch_india_vix()
+    fii = fetch_fii_data()
+
     if vix is not None:
         ctx["vix"] = vix
-        # VIX interpretation
         if vix >= 20:
             ctx["vix_regime"] = "HIGH_VOLATILITY"
         elif vix <= 14:
@@ -159,7 +181,6 @@ def fetch_and_save(global_bias: str = "neutral", sentiments: dict = None) -> dic
         ctx["fii_net_cr"] = fii["fii_net_cr"]
         ctx["dii_net_cr"] = fii.get("dii_net_cr")
         ctx["fii_date"] = fii["date"]
-        # FII bias
         if fii["fii_net_cr"] and fii["fii_net_cr"] > 500:
             ctx["fii_bias"] = "BULLISH"
         elif fii["fii_net_cr"] and fii["fii_net_cr"] < -500:
@@ -167,10 +188,37 @@ def fetch_and_save(global_bias: str = "neutral", sentiments: dict = None) -> dic
         else:
             ctx["fii_bias"] = "NEUTRAL"
 
-    out_path = REPO_ROOT / "data" / "market_context.json"
+    out_path = REPO_ROOT / "data" / f"market_context_{account}.json"
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps(ctx, indent=2))
-    log.info(f"market_context.json saved | VIX={vix} FII={fii}")
+    log.info(f"market_context_{account}.json saved | VIX={vix} FII={fii}")
+    return ctx
+
+
+def fetch_and_save_us(global_bias: str = "neutral", sentiments: dict = None,
+                      account: str = "us_trader") -> dict:
+    """Fetch US VIX only (no FII/DII — not applicable for US market)."""
+    ctx = load_market_context(account)
+
+    ctx["ts"] = datetime.now(IST).isoformat()
+    ctx["global_bias"] = global_bias
+    ctx["sentiments"] = sentiments or {}
+
+    vix = fetch_us_vix()
+    if vix is not None:
+        ctx["vix"] = vix
+        # US VIX thresholds: >25 = high, <15 = low (different from India VIX)
+        if vix >= 25:
+            ctx["vix_regime"] = "HIGH_VOLATILITY"
+        elif vix <= 15:
+            ctx["vix_regime"] = "LOW_VOLATILITY"
+        else:
+            ctx["vix_regime"] = "NORMAL"
+
+    out_path = REPO_ROOT / "data" / f"market_context_{account}.json"
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(ctx, indent=2))
+    log.info(f"market_context_{account}.json saved | US VIX={vix}")
     return ctx
 
 

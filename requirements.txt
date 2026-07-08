@@ -1,4 +1,5 @@
 dhanhq>=2.0.0
+alpaca-py>=0.30.0
 python-telegram-bot>=21.0
 pyyaml>=6.0
 python-dotenv>=1.0

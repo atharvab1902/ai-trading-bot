@@ -1,8 +1,10 @@
 {
-  "trained_at": "2026-07-07T02:19:33.027051+05:30",
-  "timezone": "IST",
+  "trained_at": "2026-07-08T14:34:33.523451-04:00",
+  "timezone": "ET",
+  "market": "US",
+  "account": "us_trader",
   "model_type": "dual",
-  "n_stocks": 98,
+  "n_trades": 10,
   "feature_cols": [
     "gap_pct",
     "vol_surge_5d",
@@ -24,14 +26,17 @@
     "stock_vs_universe_30m",
     "catalyst_score_feat"
   ],
-  "threshold": 0.3,
-  "open_threshold": 0.3,
+  "threshold": 0.25,
+  "open_threshold": 0.25,
   "mid_threshold": 0.25,
-  "old_open_threshold": 0.3,
-  "old_mid_threshold": 0.25,
-  "feedback_signals": 4206,
-  "deployed": {
-    "open": true,
-    "mid": true
+  "deployed": true,
+  "metrics": {
+    "short": {
+      "win_rate": 0.333,
+      "sharpe": -12.58,
+      "signals": 6,
+      "precision": 0.667,
+      "n_trades": 10
+    }
   }
 }

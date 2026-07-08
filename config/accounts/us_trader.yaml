@@ -1,0 +1,49 @@
+name: us_trader
+broker: alpaca
+mode: paper
+timezone: US/Eastern
+capital: 100000
+market_open: 09:30
+market_close: '16:00'
+entry_cutoff_hour: 15
+daily_loss_limit_pct: 2.0
+max_position_size: 10000
+max_positions: 3
+min_rr_ratio: 1.5
+cooldown_after_sl_minutes: 60
+rsi_buy_block: 75
+rsi_sell_block: 25
+halt_after_consecutive_losses: 3
+use_ml: true
+holiday_file: nyse_holidays.json
+premarket_script: premarket_us.py
+has_scanner: false
+active_strategy: vwap
+strategies_enabled:
+- vwap
+strategy_params:
+  vwap:
+    allow_short: true
+    cooldown_minutes: 5
+    entry_threshold_pct: 0.4
+    stoploss_pct: 0.5
+    target_pct: 0.5
+    min_recovery_ratio: 0.5
+    warmup_minutes: 60
+    vwap_end: '15:30'
+  orb:
+    allow_short: false
+    entry_buffer_pct: 0.05
+    latest_entry: '10:30'
+    range_minutes: 30
+    stoploss_pct: 0.5
+    target_pct: 1.0
+telegram_chat_id_env: TELEGRAM_CHAT_ID
+watchlist:
+- AAPL
+- AMD
+- MSFT
+- NVDA
+- TSLA
+- SPY
+- QQQ

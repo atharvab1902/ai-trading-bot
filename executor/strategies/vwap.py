@@ -1,7 +1,7 @@
 """VWAP Mean Reversion Strategy."""
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 from typing import Optional
 
 log = logging.getLogger(__name__)
@@ -24,15 +24,25 @@ class VWAP:
         self.tgt_pct = params.get("target_pct", 0.25)
         self.allow_short = params.get("allow_short", False)
         self.cooldown_after_trade = params.get("cooldown_minutes", 15)
+        # min recovery: price must bounce back this fraction of threshold from worst point
+        # e.g. 0.5 means if threshold=0.3%, price must recover 0.15% from its worst deviation
+        self.min_recovery_ratio = params.get("min_recovery_ratio", 0.5)
+        self._warmup_minutes = params.get("warmup_minutes", 45)  # skip first N min after open
 
         h, m = map(int, market_open.split(":"))
         self.open_time = time(h, m)
+
+        # Configurable end time — defaults to 15:00 for India, override for US (e.g. "15:30")
+        end_str = params.get("vwap_end", "15:00")
+        eh, em = map(int, end_str.split(":"))
+        self._end_time = time(eh, em)
 
         self._cum_price_vol: dict = {}
         self._cum_vol: dict = {}
         self._prev_price: dict = {}
         self._taken: dict = {}
         self._ticks: dict = {}
+        self._peak_dev: dict = {}  # tracks worst deviation per symbol per direction
 
     def _vwap(self, symbol: str) -> Optional[float]:
         cv = self._cum_vol.get(symbol, 0)
@@ -52,10 +62,42 @@ class VWAP:
         return (now - last).total_seconds() < self.cooldown_after_trade * 60
 
     def _skip_time(self, now: datetime) -> bool:
-        h, m = self.open_time.hour, self.open_time.minute
-        start = now.replace(hour=h, minute=m + 30, second=0, microsecond=0)
-        end = now.replace(hour=15, minute=0, second=0, microsecond=0)
+        market_open_dt = now.replace(
+            hour=self.open_time.hour, minute=self.open_time.minute, second=0, microsecond=0
+        )
+        start = market_open_dt + timedelta(minutes=self._warmup_minutes)
+        end = now.replace(hour=self._end_time.hour, minute=self._end_time.minute, second=0, microsecond=0)
         return now < start or now > end
+
+    def _update_peak_and_check_recovery(self, symbol: str, deviation_pct: float, for_long: bool) -> bool:
+        """
+        Track worst deviation from VWAP. Require price has bounced back
+        min_recovery_ratio * threshold from its worst point before entering.
+
+        This prevents entering a trade where the stock is just stuck below/above
+        VWAP without any sign of reverting — like NAUKRI stuck at -0.74% for 10+ ticks.
+        """
+        min_recovery = self.entry_threshold_pct * self.min_recovery_ratio
+        if for_long:
+            key = symbol + "_L"
+            if deviation_pct >= 0:
+                # Crossed back above VWAP — reset peak
+                self._peak_dev.pop(key, None)
+                return False
+            # Track worst (most negative) deviation
+            self._peak_dev[key] = min(self._peak_dev.get(key, deviation_pct), deviation_pct)
+            recovery = deviation_pct - self._peak_dev[key]  # positive when bouncing back
+            return recovery >= min_recovery
+        else:
+            key = symbol + "_S"
+            if deviation_pct <= 0:
+                # Crossed back below VWAP — reset peak
+                self._peak_dev.pop(key, None)
+                return False
+            # Track worst (most positive) deviation
+            self._peak_dev[key] = max(self._peak_dev.get(key, deviation_pct), deviation_pct)
+            recovery = self._peak_dev[key] - deviation_pct  # positive when coming back down
+            return recovery >= min_recovery
 
     def on_tick(self, symbol: str, price: float, volume: int,
                 now: datetime, position_open: bool) -> Optional[Signal]:
@@ -69,7 +111,13 @@ class VWAP:
         ticks = self._ticks.get(symbol, 0)
 
         if self._skip_time(now):
-            log.debug(f"{symbol} SKIP | outside VWAP window (09:30-15:00)")
+            market_open_dt = now.replace(
+                hour=self.open_time.hour, minute=self.open_time.minute, second=0, microsecond=0
+            )
+            start = market_open_dt + timedelta(minutes=self._warmup_minutes)
+            end = now.replace(hour=self._end_time.hour, minute=self._end_time.minute, second=0, microsecond=0)
+            log.debug(f"{symbol} SKIP | outside VWAP window "
+                      f"({start.strftime('%H:%M')}-{end.strftime('%H:%M')})")
             return None
 
         if position_open:
@@ -96,6 +144,19 @@ class VWAP:
         momentum_down = price < prev
         momentum_label = "UP" if momentum_up else ("DOWN" if momentum_down else "FLAT")
 
+        # Update peak deviation tracking (runs every tick, needed for recovery state)
+        if deviation_pct < 0:
+            key_l = symbol + "_L"
+            self._peak_dev[key_l] = min(self._peak_dev.get(key_l, deviation_pct), deviation_pct)
+        else:
+            self._peak_dev.pop(symbol + "_L", None)
+
+        if deviation_pct > 0:
+            key_s = symbol + "_S"
+            self._peak_dev[key_s] = max(self._peak_dev.get(key_s, deviation_pct), deviation_pct)
+        else:
+            self._peak_dev.pop(symbol + "_S", None)
+
         log.debug(
             f"{symbol} | ltp={price:.2f} prev={prev:.2f} | vwap={vwap:.2f} | "
             f"dev={deviation_pct:+.3f}% (threshold={self.entry_threshold_pct:.3f}%) | "
@@ -103,30 +164,45 @@ class VWAP:
         )
 
         if deviation_pct <= -self.entry_threshold_pct and not momentum_down:
+            min_recovery = self.entry_threshold_pct * self.min_recovery_ratio
+            peak = self._peak_dev.get(symbol + "_L", deviation_pct)
+            recovery = deviation_pct - peak
+            if recovery < min_recovery:
+                log.debug(f"{symbol} SKIP | no recovery from peak (peak={peak:+.3f}% recovery={recovery:+.3f}% need={min_recovery:.3f}%)")
+                return None
             entry = price
             sl = entry * (1 - self.sl_pct / 100)
-            # Target: whichever is further — tgt_pct move OR return to VWAP
-            tgt = max(entry * (1 + self.tgt_pct / 100), vwap * 1.001)
-            self._taken[symbol] = now
-            log.info(f"VWAP SIGNAL BUY {symbol} entry={entry:.2f} sl={sl:.2f} tgt={tgt:.2f} dev={deviation_pct:+.3f}%")
+            tgt = max(entry * (1 + self.tgt_pct / 100), vwap * (1 + self.tgt_pct / 100))
+            # NOTE: cooldown set via notify_traded() only after executor confirms the trade placed
+            log.info(f"VWAP SIGNAL BUY {symbol} entry={entry:.2f} sl={sl:.2f} tgt={tgt:.2f} dev={deviation_pct:+.3f}% recovery={recovery:+.3f}%")
             return Signal(
                 "BUY", symbol, entry, sl, tgt,
-                f"VWAP long: price {deviation_pct:.2f}% below VWAP Rs{vwap:.2f}"
+                f"VWAP long: price {deviation_pct:.2f}% below VWAP {vwap:.2f}"
             )
 
-        if self.allow_short and deviation_pct > 0 and deviation_pct >= self.entry_threshold_pct and not momentum_up:
+        if self.allow_short and deviation_pct >= self.entry_threshold_pct and not momentum_up:
+            min_recovery = self.entry_threshold_pct * self.min_recovery_ratio
+            peak = self._peak_dev.get(symbol + "_S", deviation_pct)
+            recovery = peak - deviation_pct
+            if recovery < min_recovery:
+                log.debug(f"{symbol} SKIP | no recovery from peak (peak={peak:+.3f}% recovery={recovery:+.3f}% need={min_recovery:.3f}%)")
+                return None
             entry = price
             sl = entry * (1 + self.sl_pct / 100)
-            # Target: whichever is further — tgt_pct move OR return to VWAP
-            tgt = min(entry * (1 - self.tgt_pct / 100), vwap * 0.999)
-            self._taken[symbol] = now
-            log.info(f"VWAP SIGNAL SELL {symbol} entry={entry:.2f} sl={sl:.2f} tgt={tgt:.2f} dev={deviation_pct:+.3f}%")
+            tgt = min(entry * (1 - self.tgt_pct / 100), vwap * (1 - self.tgt_pct / 100))
+            # NOTE: cooldown set via notify_traded() only after executor confirms the trade placed
+            log.info(f"VWAP SIGNAL SELL {symbol} entry={entry:.2f} sl={sl:.2f} tgt={tgt:.2f} dev={deviation_pct:+.3f}% recovery={recovery:+.3f}%")
             return Signal(
                 "SELL", symbol, entry, sl, tgt,
-                f"VWAP short: price {deviation_pct:.2f}% above VWAP Rs{vwap:.2f}"
+                f"VWAP short: price {deviation_pct:.2f}% above VWAP {vwap:.2f}"
             )
 
         return None
+
+    def notify_traded(self, symbol: str, now: datetime):
+        """Called by executor after trade is confirmed placed. Starts cooldown."""
+        self._taken[symbol] = now
+        log.debug(f"VWAP cooldown started for {symbol} ({self.cooldown_after_trade}min)")
 
     def get_state(self) -> dict:
         return {
@@ -135,6 +211,7 @@ class VWAP:
             "prev_price": dict(self._prev_price),
             "ticks": dict(self._ticks),
             "taken": {s: t.isoformat() for s, t in self._taken.items()},
+            "peak_dev": dict(self._peak_dev),
         }
 
     def load_state(self, state: dict):
@@ -147,6 +224,7 @@ class VWAP:
             s: datetime.fromisoformat(t)
             for s, t in state.get("taken", {}).items()
         }
+        self._peak_dev = dict(state.get("peak_dev", {}))
         log.info(f"VWAP state loaded | symbols={list(self._cum_vol.keys())} ticks={dict(self._ticks)}")
 
     def update_params(self, params: dict):
@@ -155,7 +233,8 @@ class VWAP:
         self.tgt_pct = params.get("target_pct", self.tgt_pct)
         self.allow_short = params.get("allow_short", self.allow_short)
         self.cooldown_after_trade = params.get("cooldown_minutes", self.cooldown_after_trade)
-        log.info(f"VWAP params updated: threshold={self.entry_threshold_pct} sl={self.sl_pct} tgt={self.tgt_pct}")
+        self.min_recovery_ratio = params.get("min_recovery_ratio", self.min_recovery_ratio)
+        log.info(f"VWAP params updated: threshold={self.entry_threshold_pct} sl={self.sl_pct} tgt={self.tgt_pct} min_recovery_ratio={self.min_recovery_ratio}")
 
     def reset_for_new_day(self):
         self._cum_price_vol.clear()
@@ -163,3 +242,4 @@ class VWAP:
         self._prev_price.clear()
         self._taken.clear()
         self._ticks.clear()
+        self._peak_dev.clear()

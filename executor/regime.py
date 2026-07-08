@@ -24,11 +24,11 @@ IST = pytz.timezone("Asia/Kolkata")
 REPO_ROOT = Path(__file__).parent.parent
 
 
-def _load_vix() -> float | None:
-    """Load India VIX from market_context.json if available."""
+def _load_vix(account: str = "default") -> float | None:
+    """Load VIX from market_context_{account}.json if available."""
     try:
         import json as _json
-        ctx_path = REPO_ROOT / "data" / "market_context.json"
+        ctx_path = REPO_ROOT / "data" / f"market_context_{account}.json"
         if ctx_path.exists():
             ctx = _json.loads(ctx_path.read_text())
             return ctx.get("vix")
@@ -37,14 +37,14 @@ def _load_vix() -> float | None:
     return None
 
 
-def detect_regime(quotes_history: Dict[str, list]) -> dict:
+def detect_regime(quotes_history: Dict[str, list], account: str = "default") -> dict:
     """
     quotes_history: {symbol: [ltp1, ltp2, ...]} — last 30 min of prices (360 ticks at 5s)
     Also reads India VIX from market_context.json if available.
     Returns regime dict.
     """
     if not quotes_history:
-        return _write_regime("CHOPPY", 0.0, "No data")
+        return _write_regime("CHOPPY", 0.0, "No data", account=account)
 
     moves = []
     volatilities = []
@@ -62,7 +62,7 @@ def detect_regime(quotes_history: Dict[str, list]) -> dict:
         volatilities.append(sum(ticks) / len(ticks) if ticks else 0)
 
     if not moves:
-        return _write_regime("CHOPPY", 0.0, "Insufficient data")
+        return _write_regime("CHOPPY", 0.0, "Insufficient data", account=account)
 
     avg_move = sum(moves) / len(moves)
     avg_vol = sum(volatilities) / len(volatilities) if volatilities else 0
@@ -70,32 +70,37 @@ def detect_regime(quotes_history: Dict[str, list]) -> dict:
     bearish_count = sum(1 for m in moves if m < -0.2)
     total = len(moves)
 
-    # India VIX override — high VIX forces VOLATILE regardless of price action
-    vix = _load_vix()
+    # VIX override — high VIX forces VOLATILE regardless of price action
+    vix = _load_vix(account)
     vix_note = f" | VIX={vix:.1f}" if vix else ""
     if vix and vix >= 20:
         return _write_regime("VOLATILE", avg_move,
-                              f"India VIX={vix:.1f} >= 20 — reduce size, no ORB{vix_note}")
+                              f"VIX={vix:.1f} >= 20 — reduce size, no ORB{vix_note}",
+                              account=account)
 
     # Volatile: avg tick-to-tick move > 0.05%
     if avg_vol > 0.05:
         return _write_regime("VOLATILE", avg_move,
-                              f"High intraday volatility: avg_tick={avg_vol:.4f}%{vix_note}")
+                              f"High intraday volatility: avg_tick={avg_vol:.4f}%{vix_note}",
+                              account=account)
 
     # Strong trend: >60% stocks moving same direction
     if bullish_count / total >= 0.6 and avg_move > 0.2:
         return _write_regime("BULLISH_TREND", avg_move,
-                              f"{bullish_count}/{total} stocks up | avg_move={avg_move:+.2f}%{vix_note}")
+                              f"{bullish_count}/{total} stocks up | avg_move={avg_move:+.2f}%{vix_note}",
+                              account=account)
 
     if bearish_count / total >= 0.6 and avg_move < -0.2:
         return _write_regime("BEARISH_TREND", avg_move,
-                              f"{bearish_count}/{total} stocks down | avg_move={avg_move:+.2f}%{vix_note}")
+                              f"{bearish_count}/{total} stocks down | avg_move={avg_move:+.2f}%{vix_note}",
+                              account=account)
 
     return _write_regime("CHOPPY", avg_move,
-                          f"Mixed signals: {bullish_count}up/{bearish_count}dn/{total-bullish_count-bearish_count}flat{vix_note}")
+                          f"Mixed signals: {bullish_count}up/{bearish_count}dn/{total-bullish_count-bearish_count}flat{vix_note}",
+                          account=account)
 
 
-def _write_regime(regime: str, avg_move: float, reason: str) -> dict:
+def _write_regime(regime: str, avg_move: float, reason: str, account: str = "default") -> dict:
     data = {
         "regime": regime,
         "avg_move_pct": round(avg_move, 3),
@@ -103,7 +108,7 @@ def _write_regime(regime: str, avg_move: float, reason: str) -> dict:
         "ts": datetime.now(IST).isoformat(),
         "strategies": _strategy_config(regime),
     }
-    path = REPO_ROOT / "data" / "regime.json"
+    path = REPO_ROOT / "data" / f"regime_{account}.json"
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(data, indent=2))
     log.info(f"REGIME: {regime} | {reason}")
@@ -142,8 +147,8 @@ def _strategy_config(regime: str) -> dict:
     }
 
 
-def load_regime() -> dict:
-    path = REPO_ROOT / "data" / "regime.json"
+def load_regime(account: str = "default") -> dict:
+    path = REPO_ROOT / "data" / f"regime_{account}.json"
     if not path.exists():
         return {"regime": "CHOPPY", "strategies": _strategy_config("CHOPPY"),
                 "position_size_multiplier": 1.0}

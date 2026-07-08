@@ -20,6 +20,11 @@ class RiskCheck:
     reason: str = ""
 
 
+def _max_pos_size(cfg: dict) -> float:
+    """Generic position size — supports both max_position_size (US) and max_position_size_inr (India)."""
+    return cfg.get("max_position_size") or cfg.get("max_position_size_inr", 0)
+
+
 def validate_config(cfg: dict) -> RiskCheck:
     """Run at startup and before every config reload."""
     if cfg.get("daily_loss_limit_pct", 999) > HARD_DAILY_LOSS_LIMIT_PCT:
@@ -27,9 +32,9 @@ def validate_config(cfg: dict) -> RiskCheck:
     if cfg.get("max_positions", 999) > HARD_MAX_POSITIONS:
         return RiskCheck(False, f"max_positions exceeds hard cap {HARD_MAX_POSITIONS}")
     cap = cfg.get("capital", 0)
-    mps = cfg.get("max_position_size_inr", 0)
-    if cap > 0 and (mps / cap * 100) > HARD_MAX_POSITION_SIZE_PCT_OF_CAPITAL:
-        return RiskCheck(False, "max_position_size_inr exceeds 50% of capital")
+    mps = _max_pos_size(cfg)
+    if cap > 0 and mps > 0 and (mps / cap * 100) > HARD_MAX_POSITION_SIZE_PCT_OF_CAPITAL:
+        return RiskCheck(False, "max_position_size exceeds 50% of capital")
     sp = cfg.get("strategy_params", {}).get(cfg.get("active_strategy"), {})
     sl = sp.get("stoploss_pct")
     if sl is None or sl < HARD_MIN_STOPLOSS_PCT or sl > HARD_MAX_STOPLOSS_PCT:
@@ -40,7 +45,7 @@ def validate_config(cfg: dict) -> RiskCheck:
 def effective_max_positions(cfg: dict) -> int:
     """Compute max open positions from capital and per-trade budget, capped by hard limit."""
     capital = cfg.get("capital", 0)
-    per_trade = cfg.get("max_position_size_inr", capital)
+    per_trade = _max_pos_size(cfg) or capital
     from_capital = int(capital / per_trade) if per_trade > 0 else 1
     explicit = cfg.get("max_positions", HARD_MAX_POSITIONS)
     return max(1, min(explicit, from_capital, HARD_MAX_POSITIONS))
@@ -72,7 +77,7 @@ def can_open_new_position(cfg: dict) -> RiskCheck:
 
 def position_size(cfg: dict, price: float) -> int:
     """Compute qty for a new position, respecting all size caps."""
-    cap_per_trade = cfg["max_position_size_inr"]
+    cap_per_trade = _max_pos_size(cfg) or cfg.get("capital", 50000)
     multiplier = cfg.get("strategy_params", {}).get(
         cfg.get("active_strategy"), {}
     ).get("size_multiplier", 1.0)

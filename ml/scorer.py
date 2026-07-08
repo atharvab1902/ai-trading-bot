@@ -15,14 +15,8 @@ import pytz
 
 from ml.features import compute_vwap, compute_ema, compute_rsi, compute_atr, FEATURE_COLS
 
-REPO_ROOT   = Path(__file__).parent.parent
-MODEL_PATH  = REPO_ROOT / "ml" / "model.pkl"
-META_PATH   = REPO_ROOT / "ml" / "model_meta.json"
-IST         = pytz.timezone("Asia/Kolkata")
-
-def _bars_cache_path() -> Path:
-    today = datetime.now(IST).strftime("%Y%m%d")
-    return REPO_ROOT / "data" / f"scorer_bars_{today}.json"
+REPO_ROOT = Path(__file__).parent.parent
+IST       = pytz.timezone("Asia/Kolkata")
 
 log = logging.getLogger(__name__)
 
@@ -33,7 +27,10 @@ class MLScorer:
     Maintains per-stock rolling feature state (last 30 bars).
     """
 
-    def __init__(self):
+    def __init__(self, account: str = "tester"):
+        self._account = account
+        self._model_path = REPO_ROOT / "ml" / f"model_{account}.pkl"
+        self._meta_path  = REPO_ROOT / "ml" / f"model_{account}_meta.json"
         self.models = {}
         self.threshold      = 0.55
         self.open_threshold = 0.55
@@ -43,21 +40,21 @@ class MLScorer:
         self._loaded = False
         self._last_meta_check = 0
         self._last_bars_save = 0
-        self._win_rate_cache: dict = {}   # {symbol: (rate, fetch_ts)}
-        self._vix_cache: tuple = (0.5, 0) # (vix_level, fetch_ts)
-        self._vol_baseline: dict = {}     # {symbol: {date_str: total_volume}}
+        self._win_rate_cache: dict = {}
+        self._vix_cache: tuple = (0.5, 0)
+        self._vol_baseline: dict = {}
         self._load()
         self._load_bars()
         self._load_vol_baseline()
 
     def _load(self):
-        if not MODEL_PATH.exists():
-            log.warning("ML model not found — scorer will pass all signals through")
+        if not self._model_path.exists():
+            log.warning(f"ML model not found ({self._model_path.name}) — passing all signals through")
             return
         try:
-            with open(MODEL_PATH, "rb") as f:
+            with open(self._model_path, "rb") as f:
                 self.models = pickle.load(f)
-            with open(META_PATH) as f:
+            with open(self._meta_path) as f:
                 meta = json.load(f)
             self.threshold     = meta.get("threshold", 0.55)
             self.open_threshold = meta.get("open_threshold", self.threshold)
@@ -79,8 +76,12 @@ class MLScorer:
         # Force save every 10th bar per symbol to ensure state is never too stale
         self._save_bars(force=(len(buf) % 10 == 0))
 
+    def _bars_cache_path(self) -> Path:
+        today = datetime.now(IST).strftime("%Y%m%d")
+        return REPO_ROOT / "data" / f"scorer_bars_{self._account}_{today}.json"
+
     def _load_bars(self):
-        path = _bars_cache_path()
+        path = self._bars_cache_path()
         if not path.exists():
             return
         try:
@@ -101,11 +102,11 @@ class MLScorer:
     def _save_bars(self, force: bool = False):
         import time
         now = time.time()
-        if not force and now - self._last_bars_save < 30:  # save at most every 30 seconds
+        if not force and now - self._last_bars_save < 30:
             return
         self._last_bars_save = now
         try:
-            path = _bars_cache_path()
+            path = self._bars_cache_path()
             # Convert bar dicts — ensure ts is serializable
             serializable = {}
             for sym, bars in self._bars.items():
@@ -119,7 +120,7 @@ class MLScorer:
         self._save_vol_baseline()
 
     def _load_vol_baseline(self):
-        path = REPO_ROOT / "data" / "vol_baseline.json"
+        path = REPO_ROOT / "data" / f"vol_baseline_{self._account}.json"
         if not path.exists():
             return
         try:
@@ -146,7 +147,7 @@ class MLScorer:
                 # Keep only the last 10 calendar days per symbol
                 if len(sym_hist) > 10:
                     del sym_hist[sorted(sym_hist.keys())[0]]
-            (REPO_ROOT / "data" / "vol_baseline.json").write_text(
+            (REPO_ROOT / "data" / f"vol_baseline_{self._account}.json").write_text(
                 json.dumps(self._vol_baseline, indent=2)
             )
         except Exception as e:
@@ -201,13 +202,13 @@ class MLScorer:
         return rate
 
     def _get_vix_level(self) -> float:
-        """Normalized India VIX from market_context.json. Cached 5 min."""
+        """Normalized VIX from market_context_{account}.json. Cached 5 min."""
         import time as _time
         now = _time.time()
         if now - self._vix_cache[1] < 300:
             return self._vix_cache[0]
         try:
-            ctx_path = REPO_ROOT / "data" / "market_context.json"
+            ctx_path = REPO_ROOT / "data" / f"market_context_{self._account}.json"
             if ctx_path.exists():
                 ctx = json.loads(ctx_path.read_text())
                 vix = ctx.get("vix")

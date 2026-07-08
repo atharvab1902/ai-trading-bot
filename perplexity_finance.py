@@ -120,6 +120,49 @@ Be specific with numbers. If data unavailable say N/A."""
     return result
 
 
+def _claude_extract_intraday(raw: str, symbols: list) -> dict:
+    """Use Claude Code CLI to extract structured trading signals from raw Perplexity text."""
+    import subprocess
+    sym_list = ", ".join(symbols)
+    prompt = f"""You are parsing a market news summary for a trading bot. Extract only REAL trading alerts.
+
+Symbols being traded: {sym_list}
+
+News text:
+{raw}
+
+Return ONLY a JSON object, no explanation:
+{{
+  "macro_shock": false,
+  "commodity_shock": false,
+  "symbol_alerts": {{}}
+}}
+
+Rules (be strict):
+- macro_shock: true ONLY for surprise RBI/Fed rate decision, war escalation, market circuit breaker, trading halt
+- commodity_shock: true ONLY if crude/gold/metals moved >3% suddenly
+- symbol_alerts: add a symbol ONLY for SPECIFIC breaking news about THAT symbol — earnings miss, trading halt, block deal, acquisition, profit warning, regulatory action. Do NOT add a symbol just because it appears in a list like "no news for GAIL, NAUKRI..."
+- When in doubt, return empty symbol_alerts"""
+
+    try:
+        res = subprocess.run(
+            ["claude", "-p", prompt, "--output-format", "text"],
+            capture_output=True, text=True, timeout=45
+        )
+        text = res.stdout.strip()
+        start = text.find("{")
+        end = text.rfind("}") + 1
+        if start >= 0 and end > start:
+            parsed = json.loads(text[start:end])
+            log.info(f"Claude intraday extract: macro={parsed.get('macro_shock')} "
+                     f"commodity={parsed.get('commodity_shock')} "
+                     f"alerts={list(parsed.get('symbol_alerts', {}).keys())}")
+            return parsed
+    except Exception as e:
+        log.warning(f"Claude intraday extract failed: {e} — returning empty signals")
+    return {"macro_shock": False, "commodity_shock": False, "symbol_alerts": {}}
+
+
 def intraday_refresh(symbols: list) -> dict:
     """
     Run every 90 min during market hours.
@@ -145,7 +188,6 @@ Keep it brief and specific. Flag anything that would change intraday trade direc
     if not raw:
         return {}
 
-    raw_lower = raw.lower()
     result = {
         "ts": datetime.now(IST).isoformat(),
         "raw": raw,
@@ -154,33 +196,18 @@ Keep it brief and specific. Flag anything that would change intraday trade direc
         "symbol_alerts": {},
     }
 
-    # Detect commodity shock
-    if any(w in raw_lower for w in ["crude surges", "crude plunges", "oil spikes",
-                                     "metal crash", "gold surges", "sharp move"]):
-        result["commodity_shock"] = True
-        log.warning(f"INTRADAY COMMODITY SHOCK detected")
+    # Use Claude Code to extract structured signals — no fragile keyword matching
+    parsed = _claude_extract_intraday(raw, symbols)
+    result["commodity_shock"] = parsed.get("commodity_shock", False)
+    result["macro_shock"] = parsed.get("macro_shock", False)
+    result["symbol_alerts"] = parsed.get("symbol_alerts", {})
 
-    # Detect macro shock
-    if any(w in raw_lower for w in ["rbi surprise", "fed surprise", "emergency rate",
-                                     "rate cut surprise", "rate hike surprise",
-                                     "ceasefire", "war escalat", "sanctions", "market emergency",
-                                     "circuit breaker", "trading halt"]):
-        result["macro_shock"] = True
-        log.warning(f"INTRADAY MACRO SHOCK detected")
-
-    # Per-symbol alerts
-    for sym in symbols:
-        if sym.lower() in raw_lower:
-            # Find surrounding context
-            idx = raw_lower.find(sym.lower())
-            snippet = raw[max(0, idx-50):idx+150]
-            if any(w in snippet.lower() for w in ["crash", "halt", "suspend",
-                                                    "acquisition", "merger", "block deal",
-                                                    "quarterly results", "q4 results", "q3 results",
-                                                    "q2 results", "q1 results", "earnings miss",
-                                                    "profit warning", "guidance cut"]):
-                result["symbol_alerts"][sym] = snippet.strip()
-                log.info(f"INTRADAY ALERT | {sym}: {snippet[:80]}")
+    if result["commodity_shock"]:
+        log.warning("INTRADAY COMMODITY SHOCK detected")
+    if result["macro_shock"]:
+        log.warning("INTRADAY MACRO SHOCK detected")
+    for sym, alert in result["symbol_alerts"].items():
+        log.info(f"INTRADAY ALERT | {sym}: {alert[:80]}")
 
     # Save for executor
     ctx_path = REPO_ROOT / "data" / "intraday_context.json"

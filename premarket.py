@@ -275,6 +275,7 @@ def main():
         market_ctx = fetch_market_context(
             global_bias=global_bias["bias"],
             sentiments=sentiments,
+            account=args.account,
         )
         vix = market_ctx.get("vix")
         fii_net = market_ctx.get("fii_net_cr")
@@ -308,7 +309,7 @@ def main():
         "halted": halted,
         "market_context": market_ctx,
     }
-    out_path = REPO_ROOT / "data" / f"premarket_{datetime.now(IST).strftime('%Y%m%d')}.json"
+    out_path = REPO_ROOT / "data" / f"premarket_{args.account}_{datetime.now(IST).strftime('%Y%m%d')}.json"
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps(output, indent=2))
 

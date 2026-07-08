@@ -1,14 +1,19 @@
 """Master scheduler. Run this ONCE and leave it running all day.
 
-What it manages:
-- 08:00 IST: morning scanner (Perplexity news + Claude Opus 4.7 catalyst scoring)
-- 08:30 IST: premarket intelligence (VIX, FII, strategist config update)
-- 09:15 IST: starts executor (ML-driven signals, dynamic watchlist)
-- 16:00 IST: postmarket Claude routine (journal, reflection)
-- Sunday 10:00: weekly Claude routine (researcher + critic + PR)
+Timing is derived automatically from the account config's market_open/market_close
+and timezone — works for both India (IST, NSE) and US (ET, NYSE) accounts.
+
+Schedule computed from config:
+  [open - 75 min]  morning scanner (India only; has_scanner: true)
+  [open - 45 min]  premarket intelligence
+  [open]           executor starts
+  [close]          executor window ends
+  [close + 45 min] postmarket analysis + ML retrain
+  Sunday 10:00 (local market time): weekly Claude routine
 
 Usage:
     python scheduler.py --account tester
+    python scheduler.py --account us_trader
 """
 
 import argparse
@@ -20,16 +25,27 @@ from datetime import datetime
 from pathlib import Path
 
 import pytz
+import yaml
 from dotenv import load_dotenv
 
 REPO_ROOT = Path(__file__).parent
-IST = pytz.timezone("Asia/Kolkata")
 load_dotenv(REPO_ROOT / ".env")
 
+_market_tz = pytz.timezone("Asia/Kolkata")  # overridden from config in main()
 
-def is_market_holiday(date) -> tuple[bool, str]:
-    """Check if date is an NSE trading holiday. Returns (is_holiday, holiday_name)."""
-    holidays_path = REPO_ROOT / "data" / "nse_holidays.json"
+
+def market_now() -> datetime:
+    return datetime.now(_market_tz)
+
+
+def _hm_add(h: int, m: int, offset_min: int) -> int:
+    """Return HHMM integer after adding offset_min (may be negative) to h:m."""
+    total = h * 60 + m + offset_min
+    return (total // 60) * 100 + (total % 60)
+
+
+def is_market_holiday(date, holiday_file: str) -> tuple[bool, str]:
+    holidays_path = REPO_ROOT / "data" / holiday_file
     if not holidays_path.exists():
         return False, ""
     try:
@@ -46,16 +62,14 @@ def is_market_holiday(date) -> tuple[bool, str]:
 
 LOG_DIR = REPO_ROOT / "logs"
 
-def ist_now() -> datetime:
-    return datetime.now(IST)
-
 
 def log(msg: str):
-    line = f"[{ist_now().strftime('%H:%M:%S')} IST] {msg}"
+    tz_label = _market_tz.zone.split("/")[-1]
+    line = f"[{market_now().strftime('%H:%M:%S')} {tz_label}] {msg}"
     print(line, flush=True)
     try:
         LOG_DIR.mkdir(parents=True, exist_ok=True)
-        today = ist_now().strftime("%Y%m%d")
+        today = market_now().strftime("%Y%m%d")
         with open(LOG_DIR / f"scheduler_{today}.log", "a", encoding="utf-8") as f:
             f.write(line + "\n")
     except Exception:
@@ -74,69 +88,95 @@ def run(cmd: list, blocking: bool = True, shell: bool = False):
 
 
 def main():
+    global _market_tz
+
     ap = argparse.ArgumentParser()
     ap.add_argument("--account", required=True)
     args = ap.parse_args()
 
-    log(f"Scheduler started for account={args.account}")
-    log("Watching for: 08:30 premarket | 09:15 executor | 16:00 postmarket | Sun 10:00 weekly")
+    # Load account config to get timezone + market hours
+    cfg_path = REPO_ROOT / "config" / "accounts" / f"{args.account}.yaml"
+    with open(cfg_path) as f:
+        cfg = yaml.safe_load(f)
 
-    scanner_done = False
+    _market_tz = pytz.timezone(cfg.get("timezone", "Asia/Kolkata"))
+
+    # Parse market open/close from config
+    _open_h, _open_m = map(int, str(cfg.get("market_open", "09:15")).split(":"))
+    _close_h, _close_m = map(int, str(cfg.get("market_close", "15:15")).split(":"))
+
+    MARKET_OPEN_HM  = _open_h * 100 + _open_m
+    MARKET_CLOSE_HM = _close_h * 100 + _close_m
+    SCANNER_HM      = _hm_add(_open_h, _open_m, -75)   # 75 min before open
+    PREMARKET_HM    = _hm_add(_open_h, _open_m, -45)   # 45 min before open
+    POSTMARKET_HM   = _hm_add(_close_h, _close_m, 45)  # 45 min after close
+
+    holiday_file    = cfg.get("holiday_file", "nse_holidays.json")
+    premarket_script = cfg.get("premarket_script", "premarket.py")
+    has_scanner     = cfg.get("has_scanner", True)
+
+    tz_label = _market_tz.zone
+    log(f"Scheduler started for account={args.account} | tz={tz_label}")
+    log(f"Market: {_open_h:02d}:{_open_m:02d}-{_close_h:02d}:{_close_m:02d} | "
+        f"Scanner:{SCANNER_HM} Premarket:{PREMARKET_HM} Postmarket:{POSTMARKET_HM}")
+
+    scanner_done   = not has_scanner  # skip scanner if config says so
     premarket_done = False
-    executor_proc = None
+    executor_proc  = None
     postmarket_done = False
-    weekly_done = False
-    last_date = ist_now().date()
+    weekly_done    = False
+    last_date      = market_now().date()
 
     try:
         while True:
-            now = ist_now()
+            now   = market_now()
             today = now.date()
 
-            # Reset flags at midnight for new day
+            # Reset flags at midnight (local market time) for new day
             if today != last_date:
-                scanner_done = False
-                premarket_done = False
+                scanner_done    = not has_scanner
+                premarket_done  = False
                 postmarket_done = False
-                weekly_done = False
-                executor_proc = None
-                last_date = today
+                weekly_done     = False
+                executor_proc   = None
+                last_date       = today
                 log("New day — flags reset.")
 
-            hm = now.hour * 100 + now.minute
+            hm         = now.hour * 100 + now.minute
             is_weekday = now.weekday() < 5
-            is_sunday = now.weekday() == 6
+            is_sunday  = now.weekday() == 6
 
-            # Market holiday check — skip all trading activity if NSE is closed
-            holiday, holiday_name = is_market_holiday(today)
+            # Market holiday check
+            holiday, holiday_name = is_market_holiday(today, holiday_file)
             if holiday:
-                if hm == 800:  # log once at 8 AM so it's visible at the top of the day
-                    log(f"MARKET HOLIDAY: {holiday_name} — no trading today. Resuming tomorrow.")
+                if hm == PREMARKET_HM:
+                    log(f"MARKET HOLIDAY: {holiday_name} — no trading today.")
                 time.sleep(30)
                 continue
 
-            # 08:00 — morning scanner (Perplexity + Claude Opus 4.7)
-            watchlist_file = REPO_ROOT / "data" / f"watchlist_{today.strftime('%Y%m%d')}.json"
-            if watchlist_file.exists():
-                scanner_done = True  # already ran today, don't re-fetch
-            if is_weekday and hm >= 800 and not scanner_done:
-                log("SCANNER: Running morning stock scanner...")
-                run([sys.executable, "-c",
-                     "from scanner.scanner import run_scanner; run_scanner()"])
-                scanner_done = True
+            # Scanner — India only (has_scanner: true in config)
+            if has_scanner:
+                watchlist_file = REPO_ROOT / "data" / f"watchlist_{today.strftime('%Y%m%d')}.json"
+                if watchlist_file.exists():
+                    scanner_done = True
+                if is_weekday and hm >= SCANNER_HM and not scanner_done:
+                    log("SCANNER: Running morning stock scanner...")
+                    run([sys.executable, "-c",
+                         "from scanner.scanner import run_scanner; run_scanner()"])
+                    scanner_done = True
 
-            # 08:30 — premarket intelligence (VIX, FII, strategist)
-            premarket_file = REPO_ROOT / "data" / f"premarket_{today.strftime('%Y%m%d')}.json"
+            # Premarket intelligence
+            premarket_file = REPO_ROOT / "data" / f"premarket_{args.account}_{today.strftime('%Y%m%d')}.json"
             if premarket_file.exists():
-                premarket_done = True  # already ran today
-            if is_weekday and hm >= 830 and not premarket_done:
-                log("PREMARKET: Fetching VIX + FII + strategist config update...")
-                run([sys.executable, "premarket.py", "--account", args.account])
+                premarket_done = True
+            if is_weekday and hm >= PREMARKET_HM and not premarket_done:
+                log(f"PREMARKET: Running {premarket_script}...")
+                run([sys.executable, premarket_script, "--account", args.account])
                 premarket_done = True
 
-            # 09:15 — start executor (only during market hours)
-            if is_weekday and 915 <= hm <= 1515 and executor_proc is None:
-                log("MARKET OPEN: Starting executor with ORB + VWAP strategies...")
+            # Executor — start at market open, run until close
+            if is_weekday and MARKET_OPEN_HM <= hm <= MARKET_CLOSE_HM and executor_proc is None:
+                log("MARKET OPEN: Starting executor...")
                 executor_proc = run(
                     [sys.executable, "-m", "executor.executor",
                      "--account", args.account,
@@ -144,21 +184,24 @@ def main():
                     blocking=False
                 )
 
-            # Check executor health
+            # Executor health check
             if executor_proc and executor_proc.poll() is not None:
-                log("WARNING: Executor crashed. Restarting...")
-                executor_proc = run(
-                    [sys.executable, "-m", "executor.executor",
-                     "--account", args.account,
-                     "--loop-seconds", "5"],
-                    blocking=False
-                )
+                if is_weekday and MARKET_OPEN_HM <= hm <= MARKET_CLOSE_HM:
+                    log("WARNING: Executor crashed. Restarting...")
+                    executor_proc = run(
+                        [sys.executable, "-m", "executor.executor",
+                         "--account", args.account,
+                         "--loop-seconds", "5"],
+                        blocking=False
+                    )
+                else:
+                    executor_proc = None  # market closed, don't restart
 
-            # 16:00 — postmarket analysis (Python) + Claude journaler
-            postmarket_file = REPO_ROOT / "data" / f"postmarket_{today.strftime('%Y%m%d')}.json"
+            # Postmarket analysis
+            postmarket_file = REPO_ROOT / "data" / f"postmarket_{args.account}_{today.strftime('%Y%m%d')}.json"
             if postmarket_file.exists():
-                postmarket_done = True  # already ran today
-            if is_weekday and hm >= 1600 and not postmarket_done:
+                postmarket_done = True
+            if is_weekday and hm >= POSTMARKET_HM and not postmarket_done:
                 log("POSTMARKET: Running news summary + journal writer...")
                 run([sys.executable, "postmarket.py", "--account", args.account])
                 log("POSTMARKET: Running Claude deep analysis...")
@@ -170,10 +213,13 @@ def main():
                     "--dangerously-skip-permissions"
                 ], shell=True)
                 log("RETRAIN: Running daily ML retrainer...")
-                run([sys.executable, "-m", "ml.daily_retrain"])
+                retrain_mod = ("ml.daily_retrain_us"
+                               if cfg.get("broker", "dhan") == "alpaca"
+                               else "ml.daily_retrain")
+                run([sys.executable, "-m", retrain_mod, "--account", args.account])
                 postmarket_done = True
 
-            # Sunday 10:00 — weekly Claude routine (researcher + critic)
+            # Weekly Claude routine — Sunday 10:00 local market time
             if is_sunday and hm >= 1000 and not weekly_done:
                 log("WEEKLY: Running Claude researcher + critic + backtester...")
                 run([
@@ -186,7 +232,7 @@ def main():
                 ], shell=True)
                 weekly_done = True
 
-            time.sleep(30)  # check every 30 seconds
+            time.sleep(30)
 
     except KeyboardInterrupt:
         log("Scheduler stopped.")

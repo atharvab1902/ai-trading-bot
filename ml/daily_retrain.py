@@ -34,10 +34,13 @@ from ml.features import build_features, FEATURE_COLS
 REPO_ROOT  = Path(__file__).parent.parent
 DB_PATH    = REPO_ROOT / "data" / "market.duckdb"
 TRADES_DB  = REPO_ROOT / "data" / "trades.db"
-MODEL_PATH = REPO_ROOT / "ml" / "model.pkl"
-META_PATH  = REPO_ROOT / "ml" / "model_meta.json"
 JOURNAL    = REPO_ROOT / "data" / "journal.md"
 IST        = pytz.timezone("Asia/Kolkata")
+
+# Set per-account at runtime in main()
+MODEL_PATH = REPO_ROOT / "ml" / "model_tester.pkl"
+META_PATH  = REPO_ROOT / "ml" / "model_tester_meta.json"
+_ACCOUNT   = "tester"
 
 log = logging.getLogger(__name__)
 
@@ -51,18 +54,18 @@ WINDOWS = {
         "end_min":   10 * 60 + 15,
         "target_pct": 0.3,
         "target_bars": 15,
-        "default_threshold": 0.25,
-        "threshold_floor": 0.15,
-        "threshold_ceil":  0.40,
+        "default_threshold": 0.45,
+        "threshold_floor": 0.30,
+        "threshold_ceil":  0.60,
     },
     "mid": {
         "start_min": 10 * 60 + 16,
         "end_min":   15 * 60 + 15,
         "target_pct": 0.2,
         "target_bars": 15,
-        "default_threshold": 0.22,
-        "threshold_floor": 0.12,
-        "threshold_ceil":  0.35,
+        "default_threshold": 0.40,
+        "threshold_floor": 0.25,
+        "threshold_ceil":  0.55,
     },
 }
 
@@ -225,7 +228,8 @@ def load_real_trade_rows() -> pd.DataFrame:
             WHERE status='closed'
               AND signal_features IS NOT NULL
               AND pnl IS NOT NULL
-        """).fetchall()
+              AND account=?
+        """, (_ACCOUNT,)).fetchall()
         con.close()
     except Exception as e:
         log.warning(f"Trade feedback read failed: {e}")
@@ -418,7 +422,12 @@ def write_journal(date_str, results_by_window, deployed_by_window,
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
-def run(force: bool = False):
+def run(force: bool = False, account: str = "tester"):
+    global MODEL_PATH, META_PATH, _ACCOUNT
+    _ACCOUNT   = account
+    MODEL_PATH = REPO_ROOT / "ml" / f"model_{account}.pkl"
+    META_PATH  = REPO_ROOT / "ml" / f"model_{account}_meta.json"
+
     now_ist  = datetime.now(IST)
     date_str = now_ist.strftime("%Y-%m-%d %H:%M IST")
     print(f"\n{'='*60}")
@@ -641,5 +650,6 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     ap = argparse.ArgumentParser()
     ap.add_argument("--force", action="store_true")
+    ap.add_argument("--account", default="tester")
     args = ap.parse_args()
-    run(force=args.force)
+    run(force=args.force, account=args.account)

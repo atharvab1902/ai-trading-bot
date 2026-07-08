@@ -25,6 +25,8 @@ from ml.scorer import MLScorer
 
 REPO_ROOT = Path(__file__).parent.parent
 IST = pytz.timezone("Asia/Kolkata")
+_market_tz = IST  # overridden at startup from account config timezone field
+_currency = "Rs"  # overridden at startup: "$" for Alpaca/US, "Rs" for Dhan/India
 log = logging.getLogger(__name__)
 
 
@@ -157,8 +159,68 @@ def replay_from_log(account: str, strategies: dict, market_open: str):
     log.info(f"Log replay complete — {replayed} ticks replayed into strategies (IST offset={ist_offset_hours:+.1f}h)")
 
 
+def init_orb_from_api(broker, orb_strategy, watchlist: list, now: datetime):
+    """
+    If bot starts after the ORB range window (9:15-9:30), fetch 1-min candles
+    from Dhan to reconstruct the opening range so ORB can still fire signals.
+    """
+    range_end = now.replace(hour=9, minute=30, second=0, microsecond=0)
+    if now < range_end:
+        return  # still in range window — live ticks will build it
+
+    from .broker import PaperBroker, DhanBroker
+    live = broker.live if isinstance(broker, PaperBroker) else broker
+    if not isinstance(live, DhanBroker):
+        return
+
+    today = now.strftime("%Y-%m-%d")
+    log.info("ORB: started after 09:30 — fetching opening range from Dhan API...")
+
+    for sym in watchlist:
+        r = orb_strategy._range.get(sym, {})
+        if "high" in r and "low" in r:
+            continue  # range already set from state/log-replay
+        try:
+            sid = str(live._security_id(sym))
+            resp = live.client.intraday_minute_data(
+                security_id=sid,
+                exchange_segment="NSE_EQ",
+                instrument_type="EQUITY",
+                from_date=today,
+                to_date=today,
+                interval=1,
+            )
+            if not resp or resp.get("status") != "success":
+                log.warning(f"ORB API range: {sym} failed — {resp}")
+                continue
+            data = resp.get("data", {})
+            # Dhan returns Unix epoch floats under 'timestamp' key
+            timestamps = data.get("timestamp", data.get("start_Time", []))
+            highs = data.get("high", [])
+            lows = data.get("low", [])
+            if not timestamps:
+                log.warning(f"ORB {sym}: API returned 0 candles for {today} (same-day data not available — bot must start before 09:15)")
+                continue
+            import datetime as dt_mod
+            range_high = None
+            range_low = None
+            for ts_epoch, h, l in zip(timestamps, highs, lows):
+                dt_ist = datetime.fromtimestamp(float(ts_epoch), tz=IST)
+                hhmm = dt_ist.strftime("%H:%M")
+                if "09:15" <= hhmm < "09:30":
+                    range_high = max(range_high, h) if range_high is not None else h
+                    range_low = min(range_low, l) if range_low is not None else l
+            if range_high is not None and range_low is not None:
+                orb_strategy._range[sym] = {"high": range_high, "low": range_low}
+                log.info(f"ORB {sym}: range recovered via API — {range_low:.2f}-{range_high:.2f}")
+            else:
+                log.warning(f"ORB {sym}: no 09:15-09:30 candles in API response")
+        except Exception as e:
+            log.warning(f"ORB range recovery {sym}: {e}")
+
+
 def ist_now() -> datetime:
-    return datetime.now(IST)
+    return datetime.now(_market_tz)
 
 
 def in_market_hours(cfg: dict) -> bool:
@@ -309,11 +371,11 @@ def check_exits(account: str, broker, tg: Telegram, dry_run: bool,
             else:
                 consecutive_losses = 0
             log.info(f"{'TARGET HIT' if hit == 'TARGET' else 'STOPLOSS HIT'} | "
-                     f"{sym} exit={exit_price:.2f} pnl=Rs{pnl:+.2f}")
+                     f"{sym} exit={exit_price:.2f} pnl={_currency}{pnl:+.2f}")
             tg.send(
                 f"{'TARGET HIT' if hit=='TARGET' else 'STOPLOSS HIT'}\n"
-                f"EXIT {side} {qty} *{sym}* @ Rs{exit_price:.2f}\n"
-                f"Entry: Rs{entry:.2f} | PnL: {'+'if pnl>=0 else ''}Rs{pnl:.2f}"
+                f"EXIT {side} {qty} *{sym}* @ {_currency}{exit_price:.2f}\n"
+                f"Entry: {_currency}{entry:.2f} | PnL: {'+'if pnl>=0 else ''}{_currency}{pnl:.2f}"
             )
             if consecutive_losses >= 2:
                 fire_floor_manager("LOSS_STREAK",
@@ -347,8 +409,8 @@ def squareoff_all(account: str, broker, tg: Telegram, dry_run: bool):
         pnl = (exit_price - entry) * qty if side == "BUY" else (entry - exit_price) * qty
         if not dry_run:
             db.close_trade(trade["id"], exit_price, pnl, notes="SQUAREOFF")
-        log.info(f"SQUAREOFF {sym} @ {exit_price:.2f} pnl=Rs{pnl:+.2f}")
-        tg.send(f"SQUAREOFF {sym} @ Rs{exit_price:.2f} | PnL: {'+'if pnl>=0 else ''}Rs{pnl:.2f}")
+        log.info(f"SQUAREOFF {sym} @ {exit_price:.2f} pnl={_currency}{pnl:+.2f}")
+        tg.send(f"SQUAREOFF {sym} @ {_currency}{exit_price:.2f} | PnL: {'+'if pnl>=0 else ''}{_currency}{pnl:.2f}")
 
 
 def send_eod_summary(account: str, capital: float, tg: Telegram):
@@ -365,11 +427,11 @@ def send_eod_summary(account: str, capital: float, tg: Telegram):
     n = trades["n"] or 0
     wins = trades["wins"] or 0
     losses = trades["losses"] or 0
-    log.info(f"EOD | trades={n} ({wins}W/{losses}L) pnl=Rs{pnl:+.2f} ({pct:+.2f}%)")
+    log.info(f"EOD | trades={n} ({wins}W/{losses}L) pnl={_currency}{pnl:+.2f} ({pct:+.2f}%)")
     tg.send(
         f"EOD Summary — *{account}*\n"
         f"Trades: {n} ({wins}W / {losses}L)\n"
-        f"PnL: {'+'if pnl>=0 else ''}Rs{pnl:.2f} ({'+'if pct>=0 else ''}{pct:.2f}%)"
+        f"PnL: {'+'if pnl>=0 else ''}{_currency}{pnl:.2f} ({'+'if pct>=0 else ''}{pct:.2f}%)"
     )
 
 
@@ -423,15 +485,19 @@ def main():
     if not check.ok:
         raise SystemExit(f"Config failed risk validation: {check.reason}")
 
+    # Set market timezone from config — all ist_now() calls use this from here on
+    global _market_tz, _currency
+    _market_tz = pytz.timezone(cfg.get("timezone", "Asia/Kolkata"))
+    _currency = "$" if cfg.get("broker", "dhan") == "alpaca" else "Rs"
+
     tg = Telegram()
     broker = make_broker(cfg)
 
-    # Validate Dhan token before doing anything else.
-    # Token expires every 24h — catch it here so user gets a Telegram alert
-    # before market opens rather than discovering it mid-session.
-    _token_ok = _check_dhan_token(broker, tg)
-    if not _token_ok:
-        raise SystemExit("Dhan token invalid or expired — update DHAN_ACCESS_TOKEN in .env")
+    # Validate Dhan token only for Dhan broker (Alpaca uses key/secret, no daily refresh)
+    if cfg.get("broker", "dhan") == "dhan":
+        _token_ok = _check_dhan_token(broker, tg)
+        if not _token_ok:
+            raise SystemExit("Dhan token invalid or expired — update DHAN_ACCESS_TOKEN in .env")
 
     enabled = cfg.get("strategies_enabled", [cfg["active_strategy"]])
     strategies = {}
@@ -449,8 +515,15 @@ def main():
     if not state_loaded:
         replay_from_log(args.account, strategies, str(cfg["market_open"]))
 
+    # If ORB is active and bot started after 9:30, recover opening range from Dhan API
+    if "orb" in strategies:
+        try:
+            init_orb_from_api(broker, strategies["orb"], cfg.get("watchlist", []), ist_now())
+        except Exception as e:
+            log.warning(f"ORB API init failed (non-fatal): {e}")
+
     # Load ML scorer once at startup
-    ml_scorer = MLScorer()
+    ml_scorer = MLScorer(account=args.account)
     candle_builder = CandleBuilder()
 
     # Load today's scanner watchlist (replaces fixed config watchlist)
@@ -459,10 +532,10 @@ def main():
     log.info(f"=== EXECUTOR STARTED | account={args.account} mode={mode_label} ===")
     log.info(f"Strategies: {list(strategies.keys())}")
     log.info(f"Watchlist ({len(active_watchlist)} stocks from scanner): {active_watchlist}")
-    log.info(f"max_positions={cfg['max_positions']} capital=Rs{cfg['capital']}")
+    log.info(f"max_positions={cfg['max_positions']} capital={_currency}{cfg['capital']}")
     log.info(f"ORB params: {cfg['strategy_params'].get('orb', {})}")
     log.info(f"VWAP params: {cfg['strategy_params'].get('vwap', {})}")
-    log.info(f"Waiting for market hours (09:15-15:15 IST)...")
+    log.info(f"Market hours: {cfg.get('market_open','09:15')}-{cfg.get('market_close','15:15')} ({cfg.get('timezone','Asia/Kolkata')})")
 
     tg.send(
         f"Executor up: *{args.account}* | mode=*{mode_label}* | "
@@ -541,7 +614,8 @@ def main():
                 log.info("EOD done. Waiting for next session.")
 
             # Reset eod_sent at market open so next day works correctly
-            if now_ist.hour == 9 and now_ist.minute == 15:
+            _open_h, _open_m = map(int, str(cfg["market_open"]).split(":"))
+            if now_ist.hour == _open_h and now_ist.minute == _open_m:
                 eod_sent = False
 
             if not in_market_hours(cfg):
@@ -562,7 +636,9 @@ def main():
             import time as _time
             _now_ts = _time.time()
             _ist_hm = now_ist.hour * 100 + now_ist.minute
-            if 915 <= _ist_hm <= 1515 and _now_ts - last_intraday_refresh > 5400:
+            _open_hm = int(str(cfg["market_open"]).replace(":", ""))
+            _close_hm = int(str(cfg["market_close"]).replace(":", ""))
+            if _open_hm <= _ist_hm <= _close_hm and _now_ts - last_intraday_refresh > 5400:
                 try:
                     from perplexity_finance import intraday_refresh
                     intraday_context = intraday_refresh(active_watchlist)
@@ -620,12 +696,12 @@ def main():
             # Re-detect regime every 30 loops (~2.5 min)
             if loop_count % 30 == 0 and quotes_history:
                 try:
-                    regime_data = detect_regime(quotes_history)
+                    regime_data = detect_regime(quotes_history, account=args.account)
                     log.info(f"REGIME UPDATED | {regime_data['regime']} | {regime_data['reason']}")
                 except Exception as e:
                     log.error(f"Regime detection error: {e}")
 
-            regime = load_regime()
+            regime = load_regime(account=args.account)
             regime_strats = regime.get("strategies", {})
             pos_size_mult = regime_strats.get("position_size_multiplier", 1.0)
 
@@ -664,7 +740,7 @@ def main():
 
             log.info(
                 f"LOOP {loop_count} | {now_ist.strftime('%H:%M:%S')} | "
-                f"open={open_ct}/{risk.effective_max_positions(cfg)} | pnl=Rs{today_pnl:+.2f} | "
+                f"open={open_ct}/{risk.effective_max_positions(cfg)} | pnl={_currency}{today_pnl:+.2f} | "
                 f"sl_streak={consecutive_losses} | "
                 f"{'HALTED' if session_halted else ('entry=OK' if entry_check.ok else 'entry=BLOCKED: ' + entry_check.reason)}"
             )
@@ -846,7 +922,8 @@ def main():
                 qty = risk.position_size(cfg, sig.price)
                 if pos_size_mult != 1.0:
                     qty = max(1, int(qty * pos_size_mult))
-                log.info(f"POSITION SIZE | budget=Rs{cfg['max_position_size_inr']} price={sig.price:.2f} qty={qty} regime_mult={pos_size_mult:.1f}")
+                _budget = cfg.get("max_position_size") or cfg.get("max_position_size_inr", 0)
+                log.info(f"POSITION SIZE | budget={_budget} price={sig.price:.2f} qty={qty} regime_mult={pos_size_mult:.1f}")
 
                 if qty <= 0:
                     log.warning(f"SKIP {sym} | qty=0 (price too high for position size)")
@@ -867,6 +944,51 @@ def main():
                 catalyst_info = catalyst_map.get(sym, {})
                 catalyst_score = catalyst_info.get("catalyst_score", 5)
                 ml_prob, ml_ok, ml_features = ml_scorer.score(sym, direction, catalyst_score)
+                if not cfg.get("use_ml", True):
+                    ml_ok = True  # bypass ML gate — use strategy + regime filter only
+
+                # Filter 1 — Regime-bias: block counter-trend trades when market has direction.
+                # avg_move > +0.15% = market drifting up → don't short (SELL).
+                # avg_move < -0.15% = market drifting down → don't buy (BUY).
+                if ml_ok:
+                    avg_move_pct = regime.get("avg_move_pct", 0.0)
+                    is_counter_trend = (
+                        (sig.action == "SELL" and avg_move_pct > 0.15) or
+                        (sig.action == "BUY"  and avg_move_pct < -0.15)
+                    )
+                    if is_counter_trend:
+                        ml_ok = False
+                        log.info(f"REGIME BLOCKED | {sym} {sig.action} "
+                                 f"counter-trend (avg_move={avg_move_pct:+.2f}%)")
+
+                # Filter 2 — Stock character filters based on bars_above_vwap.
+                # 160-trade analysis:
+                #   BUY  + bars_above < 45%     → 31% WR (54 trades) — stock downtrending, skip
+                #   SELL + bars_above 30-55%    → 0%  WR (12 trades) — no conviction zone, skip
+                #   SELL + bars_above <30% or >55% → 48-57% WR — allowed
+                if ml_ok:
+                    bars_above = ml_features.get("bars_above_vwap_pct", 50) if ml_features else 50
+                    if sig.action == "BUY" and bars_above < 45:
+                        ml_ok = False
+                        log.info(f"VWAP-BIAS BLOCKED | {sym} BUY "
+                                 f"bars_above={bars_above:.0f}% (stock bearish, skip long)")
+                    elif sig.action == "SELL" and 30 <= bars_above < 55:
+                        ml_ok = False
+                        log.info(f"VWAP-BIAS BLOCKED | {sym} SELL "
+                                 f"bars_above={bars_above:.0f}% (no conviction zone, 0% WR in 160 trades)")
+
+                # Filter 3 — Time cutoff: stop new entries after configured hour.
+                # India default 13 (13:00 IST) — 160-trade analysis showed 29% WR after.
+                # US default 15 (15:00 ET) — 1 hour before close.
+                if ml_ok:
+                    entry_hour = now_ist.hour
+                    entry_min  = now_ist.minute
+                    cutoff_hour = cfg.get("entry_cutoff_hour", 13)
+                    if entry_hour >= cutoff_hour:
+                        ml_ok = False
+                        log.info(f"TIME BLOCKED | {sym} {sig.action} "
+                                 f"past {cutoff_hour}:00 cutoff ({entry_hour}:{entry_min:02d})")
+
                 if not ml_ok:
                     log.info(f"ML BLOCKED | {sym} {sig.action} prob={ml_prob:.3f} catalyst={catalyst_score} — skipping")
                     db.log_event(args.account, "INFO", "ml_blocked",
@@ -888,8 +1010,8 @@ def main():
                     db.log_event(args.account, "INFO", "dry_run_signal",
                                  f"{sig.action} {qty} {sym} @ {sig.price:.2f}")
                     tg.send(
-                        f"[DRY] {sig.action} {qty} *{sym}* @ Rs{sig.price:.2f}\n"
-                        f"SL Rs{sig.stoploss:.2f} / TGT Rs{sig.target:.2f}"
+                        f"[DRY] {sig.action} {qty} *{sym}* @ {_currency}{sig.price:.2f}\n"
+                        f"SL {_currency}{sig.stoploss:.2f} / TGT {_currency}{sig.target:.2f}"
                     )
                     continue
 
@@ -928,7 +1050,7 @@ def main():
                 # Attach market context (VIX, FII) if available from premarket
                 try:
                     import json as _json
-                    ctx_path = REPO_ROOT / "data" / "market_context.json"
+                    ctx_path = REPO_ROOT / "data" / f"market_context_{args.account}.json"
                     if ctx_path.exists():
                         ctx = _json.loads(ctx_path.read_text())
                         signal_features["vix"] = ctx.get("vix")
@@ -956,10 +1078,14 @@ def main():
                     log.error(f"TRADE NOT RECORDED | {sym}: {e}")
                     continue
                 open_ct += 1
+                # Tell strategy the trade was placed so it starts cooldown now (not when signal was generated)
+                strat_obj = strategies.get(fired_strategy)
+                if strat_obj and hasattr(strat_obj, "notify_traded"):
+                    strat_obj.notify_traded(sym, now_ist.replace(tzinfo=None))
                 log.info(f"TRADE ENTERED | {sig.action} {qty} {sym} @ {res.fill_price:.2f} | open_ct={open_ct}")
                 tg.send(
-                    f"ENTRY {sig.action} {qty} *{sym}* @ Rs{res.fill_price:.2f}\n"
-                    f"SL Rs{sig.stoploss:.2f} / TGT Rs{sig.target:.2f}\n"
+                    f"ENTRY {sig.action} {qty} *{sym}* @ {_currency}{res.fill_price:.2f}\n"
+                    f"SL {_currency}{sig.stoploss:.2f} / TGT {_currency}{sig.target:.2f}\n"
                     f"{sig.reason}"
                 )
 

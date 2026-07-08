@@ -1,0 +1,15 @@
+{
+  "ts": "2026-07-07T22:10:33.589311+05:30",
+  "global_bias": "neutral",
+  "sentiments": {
+    "AAPL": 1,
+    "TSLA": 0,
+    "AMD": 1,
+    "MSFT": 1,
+    "NVDA": 1,
+    "SPY": 0,
+    "QQQ": 0
+  },
+  "vix": 15.85,
+  "vix_regime": "NORMAL"
+}

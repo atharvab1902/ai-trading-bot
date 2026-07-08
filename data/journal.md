@@ -2227,3 +2227,731 @@ Feedback signals used: 463
     time_bucket               0.070
     mom_30m_pct               0.066
     mom_15m_pct               0.054
+
+## 2026-05-29 (tester)
+**Strategy:** vwap
+**Trades:** 27 (8W / 19L)
+**PnL:** Rs-170.45
+
+**Market:** Nifty 50 was **slightly lower/flat-to-weak** in today’s trade, with live market trackers showing it around the **23,900** area and broader sentiment cautious. Major drags mentioned in live updates included **auto, metal, oil & gas, PSU banks, and some gaming stocks**, while **IT and a few large-cap names** were holding up better.[2][4][6]
+
+Big news flow was dominated by **weak market breadth** and risk-off sentiment, with commentary pointing to pressure from **foreign outflows, rupee weakness, crude/geopolitical headlines, and the Supreme Court’s GST ruling on online gaming** hitting names like Delta Corp and Nazara.[2][5][7]
+
+**Context:** Global bias was RISK_OFF. Skipped event-risk stocks: MFSL, SRF, BERGEPAINT.
+
+**Best trade:** BOSCHLTD +Rs495.30 (TARGET)
+**Worst trade:** WIPRO Rs-274.72 (STOPLOSS)
+
+**Edge check:** Loss rate >60% — check if market was choppy/low-volume. Review signal quality.
+
+> WARNING: #stopped-out appears 33x in recent journal. Researcher should review stoploss width.
+
+**Tags:** #asianpaint #bergepaint #boschltd #clean-exit #dixon #gail #irctc #loss #mfsl #naukri #siemens #squareoff #srf #stopped-out #sunpharma #tatacomm #vwap #win #wipro
+
+---
+
+## 2026-05-29 (tester) [enriched]
+**Strategy:** vwap (OPEN + MID windows; mode: paper)
+**Trades:** 27 (8W / 13L / 6 breakeven)
+**PnL:** -Rs170.45
+**Cumulative week PnL:** -Rs170.45 (single session this week in journal; prior sessions not yet aggregated)
+**Market:** Nifty 50 flat-to-weak ~23,900. Global bias RISK_OFF. Drags: auto, metal, oil & gas, PSU banks. Supports: IT, select large-cap. FII net negative. Supreme Court GST ruling hit gaming stocks (Delta Corp, Nazara). Crude/rupee/geopolitical headwinds. Regime: CHOPPY throughout session.
+
+---
+
+**Trade breakdown:**
+
+| # | Time | Symbol | Side | PnL | Exit | ml_prob | consec | cat_dir | cat_score | Notes |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 112 | 10:42 | IRCTC | SELL | Rs0.00 | BE | 0.5991 | 0 | NEUTRAL | 3 | Trailing SL to breakeven |
+| 113 | 10:44 | BERGEPAINT | BUY | -Rs273.34 | SL | 0.4715 | 0 | NEUTRAL | 3 | NOT IN WATCHLIST |
+| 114 | 10:44 | MFSL | SELL | -Rs265.85 | SL | 0.5546 | 0 | NEUTRAL | 3 | NOT IN WATCHLIST |
+| 115 | 10:44 | NAUKRI | BUY | -Rs271.95 | SL | 0.5421 | 0 | LONG | 7 | Catalyst conflict — BUY on LONG catalyst, lost |
+| 116 | 10:44 | SIEMENS | SELL | -Rs272.02 | SL | 0.5478 | 0 | SHORT | 4 | Aligned catalyst; SL |
+| 117 | 10:45 | BOSCHLTD | SELL | -Rs205.78 | SL | 0.7374 | 0 | NEUTRAL | 3 | Highest ml_prob of session; SL'd within 3 min |
+| 118 | 10:48 | TATACOMM | BUY | Rs0.00 | BE | 0.5818 | 0 | NEUTRAL | 2 | |
+| 119 | 10:48 | DIXON | BUY | Rs0.00 | BE | 0.5118 | 0 | NEUTRAL | 3 | |
+| 120 | 10:48 | SUNPHARMA | BUY | Rs0.00 | BE | 0.5637 | 0 | NEUTRAL | 2 | NOT IN WATCHLIST |
+| 121 | 11:13 | SRF | BUY | -Rs267.99 | SL | 0.4141 | 3 | NEUTRAL | 3 | consec=3 at entry; NOT IN WATCHLIST |
+| 122 | 11:15 | WIPRO | BUY | -Rs274.72 | SL | 0.4781 | 3 | NEUTRAL | 3 | consec=3; worst trade |
+| 123 | 11:23 | ASIANPAINT | BUY | +Rs382.95 | TARGET | 0.4117 | 4 | NEUTRAL | 3 | consec=4 at entry; won despite breach |
+| 124 | 12:26 | SIEMENS | SELL | Rs0.00 | BE | 0.4788 | 0 | SHORT | 4 | 2nd SIEMENS entry |
+| 125 | 12:26 | ASIANPAINT | SELL | Rs0.00 | BE | 0.5850 | 0 | NEUTRAL | 3 | Round-trip; <3 min after ASIANPAINT TARGET |
+| 126 | 12:37 | TATACOMM | BUY | -Rs266.03 | SL | 0.5354 | 0 | NEUTRAL | 2 | 2nd TATACOMM entry |
+| 127 | 12:52 | BOSCHLTD | SELL | +Rs495.30 | TARGET | 0.5352 | 2 | NEUTRAL | 3 | 2nd BOSCHLTD; best trade |
+| 128 | 13:12 | BERGEPAINT | BUY | -Rs273.92 | SL | 0.5552 | 3 | NEUTRAL | 3 | 2nd BERGEPAINT; consec=3; NOT IN WATCHLIST |
+| 129 | 13:18 | NAUKRI | BUY | +Rs377.62 | TARGET | 0.3355 | 3 | LONG | 7 | 2nd NAUKRI; consec=3; catalyst aligned; won |
+| 130 | 13:44 | DIXON | BUY | -Rs256.32 | SL | 0.5970 | 3 | NEUTRAL | 3 | 2nd DIXON; consec=3 |
+| 131 | 13:53 | GAIL | SELL | +Rs419.17 | TARGET | 0.4513 | 4 | SHORT | 8 | consec=4; cat_score=8 SHORT; cleanest trade |
+| 132 | 14:18 | BOSCHLTD | BUY | -Rs204.85 | SL | 0.6860 | 0 | NEUTRAL | 3 | 3rd BOSCHLTD; direction flip SELL->BUY |
+| 133 | 14:19 | TATACOMM | SELL | -Rs268.29 | SL | 0.5354 | 0 | NEUTRAL | 2 | 3rd TATACOMM; direction flip BUY->SELL |
+| 134 | 14:20 | MFSL | SELL | +Rs254.02 | TARGET | 0.4068 | 0 | NEUTRAL | 3 | 2nd MFSL; direction flip; NOT IN WATCHLIST |
+| 135 | 14:45 | SIEMENS | SELL | +Rs348.52 | TARGET | 0.6692 | 0 | SHORT | 4 | 3rd SIEMENS; finally TARGET |
+| 136 | 14:46 | SRF | BUY | +Rs399.06 | TARGET | 0.4620 | 0 | NEUTRAL | 3 | 2nd SRF; NOT IN WATCHLIST |
+| 137 | 14:51 | WIPRO | SELL | +Rs390.04 | TARGET | 0.3737 | 1 | NEUTRAL | 3 | 2nd WIPRO; direction flip BUY->SELL |
+| 138 | 14:57 | SRF | SELL | -Rs136.06 | SL | 0.5188 | 0 | NEUTRAL | 3 | 3rd SRF; direction flip BUY->SELL; final entry |
+
+---
+
+**Best trade:** BOSCHLTD SELL +Rs495.30 (T127) — 2nd entry on symbol, 12:52, consec=2, no catalyst alignment (NEUTRAL/3). Clean TARGET. The irony: BOSCHLTD's first entry (T117) had ml_prob=0.7374, the highest of the session, and SL'd in under 3 minutes. The winning entry had ml_prob=0.5352 — barely above threshold. Repeatable? Uncertain. The direction was right the second time; the first entry was stopped out on the same thesis. Do not treat this as edge confirmation.
+
+**Worst trade:** WIPRO BUY -Rs274.72 (T122) — consec=3 at entry, NEUTRAL catalyst, ml_prob=0.4781. Fired directly past the soft-pause threshold that has been CRITICAL/unimplemented since 2026-04-30. No structural reason this trade should have fired. The second WIPRO entry (T137, SELL, direction flip) TARGET'd at +Rs390.04 — same pattern as BOSCHLTD: lose on the first entry, reverse direction, win on the second. This is not a strategy; it is dollar-cost-averaging into a position and hoping. Per-symbol cooldown would have eliminated both the loss and the inadvertent recovery.
+
+---
+
+**Pattern analysis:**
+
+**1. 27 trades in one CHOPPY session — highest volume in this journal; signal quality degradation confirmed**
+
+The prior session high was 8 trades (2026-05-22). Today: 27 trades, 41 minutes of activity at open cluster alone. The ML threshold is currently 0.250 (OPEN) / 0.220 (MID). At these thresholds in a CHOPPY regime, the model is generating an excessive number of passing signals — the session win rate is 8/27 = 29.6%, near chance. The 6 breakevens and 13 losses confirm the market offered no directional edge. A CHOPPY regime gate would have halted or reduced the signal queue before market open. Alternatively, a max-daily-trades cap (e.g. 12) would have preserved capital by forcing the bot to skip marginal signals once the cap is reached. The volume itself is the diagnostic: when 27 signals pass the ML filter in one choppy session, the filter threshold is too low for the prevailing regime.
+
+**2. Watchlist contamination — BERGEPAINT, MFSL, SRF, SUNPHARMA traded; none in tester.yaml**
+
+Four symbols executed trades today that are not in the current watchlist (BERGEPAINT x2, MFSL x2, SRF x3, SUNPHARMA x1 = 8 trades, 29.6% of session volume). tester.yaml watchlist: SIEMENS, WIPRO, BOSCHLTD, TATACOMM, GAIL, NAUKRI, PAGEIND, DIXON, ASIANPAINT, IRCTC. None of the four contaminating symbols are present. Possible causes: (a) watchlist cached at startup, dynamic expansion added symbols later without config reload; (b) a separate watchlist source (e.g. ML training universe) is bleeding into the live signal queue; (c) the executor's symbol resolver is not filtering against the YAML watchlist at signal generation time. This is a silent config-to-execution mismatch — the system is trading symbols the operator did not authorise. Flagged for researcher as highest-priority structural bug. Removing these 8 trades: remaining 19 trades, 7W/10L/2BE, net approximately -Rs312, worse on win rate but smaller loss pool — the contamination is not the primary PnL driver but represents a compliance failure.
+
+**3. Same-symbol multi-entry — cooldown completely absent; direction flipping masks the structural gap**
+
+Symbol re-entry counts today: BOSCHLTD x3 (SELL/SELL/BUY), TATACOMM x3 (BUY/BUY/SELL), SIEMENS x3 (SELL/SELL/SELL), SRF x3 (BUY/BUY/SELL), BERGEPAINT x2 (BUY/BUY — not in watchlist), NAUKRI x2 (BUY/BUY), WIPRO x2 (BUY/SELL), DIXON x2 (BUY/BUY). Eight symbols with multiple entries, 17 of 27 trades are repeat-symbol entries. The BOSCHLTD, TATACOMM, SRF, and WIPRO direction flips (first entry SL, second entry different direction, TARGET) produced the afternoon recovery. This is not a strategy feature — it is the bot re-entering after a loss in the opposite direction and accidentally profiting. A 90-minute same-symbol cooldown post-SL (already in cooldown_after_sl_minutes: 90 in config but apparently not enforced at signal generation) would have blocked all second and third entries. The `#same-symbol-cooldown` count is now 5+ instances across sessions. Config has the parameter; enforcement is absent.
+
+**4. Consecutive-loss breach at entries for T121, T122, T123, T128, T129, T130, T131 — winners at consec=4 masking the gap**
+
+The consec counter at entry for key trades: T121 SRF consec=3 (-Rs267.99), T122 WIPRO consec=3 (-Rs274.72), T123 ASIANPAINT consec=4 (+Rs382.95), T128 BERGEPAINT consec=3 (-Rs273.92), T129 NAUKRI consec=3 (+Rs377.62), T130 DIXON consec=3 (-Rs256.32), T131 GAIL consec=4 (+Rs419.17). Two wins at consec=4 (ASIANPAINT, GAIL) recovered significant PnL and superficially justify ignoring the gate. They do not. ASIANPAINT NEUTRAL/3 winning at consec=4 in a CHOPPY session is variance — there is no structural reason the 5th entry in a losing streak should outperform. GAIL winning at consec=4 with cat_score=8 SHORT is a better process trade, but still fired past the soft-pause threshold. The soft-pause at consec >= 2 has been CRITICAL/unimplemented since 2026-04-30 — now 8+ sessions. Counting from T121: if the soft-pause blocked entries at consec >= 2, Trades 121, 122, 128, 130 (4 losses, -Rs1,072.23) would not have fired. The two wins at consec=4 (ASIANPAINT +Rs382.95, GAIL +Rs419.17) would also not have fired. Net cost of the gate: -Rs1,072.23 losses blocked vs +Rs802.12 wins blocked — implementing the gate would have saved Rs270.11 on this session alone, on top of the structural compliance improvement.
+
+**5. Morning cluster failure: 10:42–11:23, 12 trades in 41 minutes, 5L/3BE/1W**
+
+Trades 112–123 fired in a 41-minute window at session open. Results: 5 losses, 3 breakevens, 1 win (ASIANPAINT at consec=4, discussed above). Gross losses: -Rs1,556.93. The cluster includes BOSCHLTD T117 with ml_prob=0.7374 — the session's highest confidence signal — stopped out within 3 minutes. This is `#ml-high-prob-open-failure` instance 5+. The pattern is consistent: the OPEN window in a CHOPPY session produces high ml_prob signals that fail early because the model was trained on a universe that does not adequately distinguish CHOPPY open conditions from trending ones. All 12 morning trades were NEUTRAL/LONG catalyst (score 2–7) — no strong SHORT catalyst alignment in the morning cluster that survived. The breakeven cluster (IRCTC, TATACOMM, DIXON, SUNPHARMA) reflects trailing SL functioning correctly, not signal quality. The morning cluster is a regime problem: 12 signals in 41 minutes at a CHOPPY open should not pass any gate.
+
+**6. Afternoon recovery: 12:52–14:51, 7 TARGET hits reversing the damage**
+
+Trades 127, 129, 131, 134, 135, 136, 137 all hit TARGET between 12:52 and 14:51. Gross wins: +Rs2,683.73. This reversed the morning's -Rs1,556.93 and the midday losses, producing the near-flat -Rs170.45 close. The recovery is real, but the causal structure is not clean: BOSCHLTD (T127), WIPRO (T137), SRF (T136) won after direction flips from earlier losing entries; NAUKRI (T129), GAIL (T131) won on aligned catalyst in breach conditions. The afternoon winners include two non-watchlist symbols (SRF, MFSL) and two breach-condition entries (NAUKRI consec=3, GAIL consec=4). A near-flat result built on direction-flip recoveries and breach-condition wins in non-watchlist symbols is not a positive process outcome.
+
+**7. NAUKRI BUY: T115 SL, T129 TARGET — catalyst alignment necessary but not sufficient at first entry**
+
+Both NAUKRI entries had cat_dir=LONG cat_score=7 — the catalyst was aligned on both. T115 at 10:44 (ml_prob=0.5421, consec=0) SL'd. T129 at 13:18 (ml_prob=0.3355, consec=3) TARGET'd. The second entry had lower ML confidence and higher consecutive-loss count yet won. This is not a pattern that can be exploited structurally — the timing of the second entry relative to the market structure at 13:18 vs 10:44 is the more likely explanation (market had settled after the morning volatility burst). Catalyst alignment at score=7 is strong but insufficient at session open in CHOPPY conditions. `#catalyst-conflict` count updated: T115 filed as catalyst conflict (BUY on LONG, lost) not because direction misaligned but because the open-window CHOPPY environment invalidated the setup before the catalyst could express.
+
+**8. GAIL SELL T131: cat_score=8 SHORT, consec=4 at entry, TARGET — cleanest trade of the day in a breach condition**
+
+GAIL (T131, 13:53, SELL, cat_score=8 SHORT, ml_prob=0.4513, consec=4) is the strongest catalyst-aligned trade in the session and hit TARGET +Rs419.17. This is the best process trade despite firing past the consec gate. The outcome validates the catalyst signal quality (score=8 is among the highest in the journal) but does not validate the process of trading at consec=4. The consec gate should be implemented and GAIL-type setups should be an exception carve-out, not the default behavior. If the soft-pause allows override for cat_score >= 7, this trade fires under that rule; if not, the gate blocks it and the researcher needs to decide whether catalyst quality should override consec count.
+
+---
+
+**Recurring patterns (updated counts):**
+
+| Pattern | Count (updated) | Note |
+|---|---|---|
+| `#stopped-out` | 34+ | 13 SL exits today; ATR-scaled SL overdue |
+| `#choppy-market` | 15+ sessions | 27 trades today all in CHOPPY; no regime gate |
+| `#consecutive-loss-breach` | 8+ sessions | consec reached 4 today multiple times; gate unimplemented since 2026-04-30 |
+| `#same-symbol-cooldown` | 5+ instances | BOSCHLTD x3, TATACOMM x3, SRF x3, SIEMENS x3 today; config param exists, unenforced |
+| `#shallow-deviation` | 7+ | No new shallow-dev flags today; prior count holds |
+| `#vedl-repeat` | 6 | VEDL not in today's session; count unchanged |
+| `#ml-filter-weak` | 13+ | ml_prob=0.3355 (T129 NAUKRI TARGET) passed; ml_prob=0.4117 (T123 ASIANPAINT TARGET); winners with low ml_prob, losers with moderate — filter adding minimal signal |
+| `#ml-high-prob-open-failure` | 5+ | BOSCHLTD ml_prob=0.7374, SL'd in 3 min (T117) |
+| `#bars-above-vwap-momentum-conflict` | 4+ | No new instances today; prior count holds |
+| `#losing-day` | 8 | -Rs170.45 today |
+| `#winning-day` | 5 | Count unchanged |
+| `#rsi-gate-logic-gap` | 1 (introduced 2026-05-22) | No new RSI-gate violations confirmed today; remains unimplemented |
+| `#catalyst-conflict` | 5+ | T115 NAUKRI BUY on LONG catalyst, open-window CHOPPY, SL |
+
+---
+
+**Edge check:** 8W/13L/6BE with net -Rs170.45 is nominally a losing day on the smallest possible margin (the 27-trade gross loss pool was ~Rs2,856 and the recovery brought it to Rs170). This is not edge — it is a near-flat result produced by direction-flip recoveries (BOSCHLTD, WIPRO, SRF, TATACOMM all lost-then-reversed-and-won) and two breach-condition wins (ASIANPAINT, GAIL at consec=4) that happened to cancel the morning cluster failure. Remove the four non-watchlist symbols from analysis: 19 authorised trades, ~29.6% win rate. In a CHOPPY regime with no regime gate, no consec gate, and no same-symbol cooldown, a near-flat result is variance — the underlying process produced a session where structural filters would have improved the outcome materially. The afternoon recovery from -Rs2,500+ to -Rs170 is real money saved, but the mechanism (direction flip, consec breach) is not a strategy. Low trade count per symbol is not the issue today — 27 trades is the opposite problem. This is variance on the sign, structural failure on the process.
+
+---
+
+**For researcher (carry-forward CRITICAL + new from today):**
+
+New (flagged today, CRITICAL):
+
+- **CRITICAL (NEW): Watchlist contamination.** BERGEPAINT, MFSL, SRF, SUNPHARMA traded despite not appearing in tester.yaml. 8 of 27 trades were in unauthorised symbols. Possible causes: watchlist caching bug at startup, dynamic symbol expansion in ML signal generator, or executor not filtering against YAML watchlist at signal time. Must identify the source before next session — this is a compliance failure, not a tuning issue.
+- **CRITICAL (NEW): Max-daily-trades cap.** 27 trades in a CHOPPY session is a signal quality degradation signal. The ML filter is passing too many signals when regime=CHOPPY. Implement a max-daily-trades cap (suggested: 12–15) OR raise the ML threshold in CHOPPY from 0.220/0.250 to 0.400/0.450 until regime improves. The cap is a blunt instrument; the regime-conditional threshold raise is the correct structural fix.
+
+Carry-forward CRITICAL (all unimplemented, all overdue 14+ sessions):
+
+- **CRITICAL (14+ sessions): Consecutive-loss soft-pause at consec >= 2.** Consec reached 4 today at multiple entry points. Cost on this session: implementing would have blocked 4 losses (-Rs1,072.23) and 2 wins (+Rs802.12) — net +Rs270.11 improvement. Cumulative cost across 8+ sessions is materially larger.
+- **CRITICAL (14+ sessions): Same-symbol intra-day cooldown (90-min post-SL).** cooldown_after_sl_minutes=90 is in config but not enforced at signal generation. BOSCHLTD x3, TATACOMM x3, SRF x3 today. Enforce the config param that already exists.
+- **CRITICAL (10+ sessions): vwap_dev floor 0.50%.** No shallow-deviation new instances today, but the fix remains unimplemented.
+- **CRITICAL (14+ sessions): Choppy-regime VWAP gate.** 15+ consecutive sessions all in CHOPPY. The strategy has never halted, size-reduced, or threshold-raised for regime. This is the root cause of the 27-trade session.
+- **CRITICAL (4+ sessions): Catalyst conflict filter.** T115 NAUKRI entered BUY with LONG catalyst in open-window CHOPPY — the setup was structurally conflicted. A filter blocking entries where catalyst and price action conflict in CHOPPY should be scoped.
+- **RSI gate logic gap (2026-05-22, unimplemented):** rsi_sell_block=25 does not block shorting into overbought conditions. Implement symmetric rsi_sell_block_high=75.
+
+**Tags:** #vwap #orb #choppy-market #losing-day #consecutive-loss-breach #same-symbol-cooldown #ml-filter-weak #ml-high-prob-open-failure #stopped-out #fakeout #catalyst-conflict #boschltd #tatacomm #siemens #srf #bergepaint #naukri #wipro #gail #asianpaint #dixon #irctc #mfsl #sunpharma #low-volume #news-gap
+
+---
+---
+## ML Retrain — 2026-05-29 20:26 IST (IST)
+Feedback signals used: 463
+
+### OPEN window | deployed=YES | threshold 0.250 -> 0.250
+  long/sharpe: -12.991 -> -12.984
+  long/win_rate: 0.311 -> 0.312
+  long/n_signals: 85478 -> 85556
+  short/sharpe: -13.513 -> -13.557
+  short/win_rate: 0.31 -> 0.31
+  short/n_signals: 81673 -> 82175
+
+### MID window | deployed=YES | threshold 0.220 -> 0.220
+  long/sharpe: -21.162 -> -21.163
+  long/win_rate: 0.199 -> 0.199
+  long/n_signals: 440687 -> 440849
+  short/sharpe: -19.654 -> -19.653
+  short/win_rate: 0.222 -> 0.222
+  short/n_signals: 440627 -> 440545
+
+### Feature importance
+  OPEN_LONG — top 5 features:
+    is_first_30min            0.209
+    atr14_pct                 0.183
+    vol_surge_5d              0.093
+    orb_width_pct             0.074
+    mom_15m_pct               0.051
+
+  OPEN_SHORT — top 5 features:
+    atr14_pct                 0.229
+    is_first_30min            0.148
+    time_bucket               0.095
+    orb_width_pct             0.076
+    mom_15m_pct               0.064
+
+  MID_LONG — top 5 features:
+    atr14_pct                 0.469
+    mom_15m_pct               0.083
+    mom_30m_pct               0.072
+    orb_width_pct             0.068
+    ema9_21_spread            0.045
+
+  MID_SHORT — top 5 features:
+    atr14_pct                 0.463
+    time_bucket               0.074
+    is_last_hour              0.074
+    mom_30m_pct               0.057
+    vwap_dev_pct              0.055
+
+---
+## ML Retrain — 2026-06-05 05:07 IST (IST)
+Feedback signals used: 560
+
+### OPEN window | deployed=YES | threshold 0.450 -> 0.450
+  long/sharpe: -11.791 -> -11.764
+  long/win_rate: 0.327 -> 0.328
+  long/n_signals: 48806 -> 50660
+  short/sharpe: -11.778 -> -11.583
+  short/win_rate: 0.352 -> 0.356
+  short/n_signals: 49251 -> 48276
+
+### MID window | deployed=YES | threshold 0.400 -> 0.400
+  long/sharpe: -18.924 -> -18.972
+  long/win_rate: 0.229 -> 0.229
+  long/n_signals: 339517 -> 342193
+  short/sharpe: -19.397 -> -19.353
+  short/win_rate: 0.235 -> 0.236
+  short/n_signals: 338319 -> 338672
+
+### Feature importance
+  OPEN_LONG — top 5 features:
+    is_first_30min            0.198
+    atr14_pct                 0.176
+    vol_surge_5d              0.095
+    orb_width_pct             0.074
+    mom_15m_pct               0.057
+
+  OPEN_SHORT — top 5 features:
+    is_first_30min            0.244
+    atr14_pct                 0.227
+    time_bucket               0.086
+    orb_width_pct             0.062
+    mom_15m_pct               0.049
+
+  MID_LONG — top 5 features:
+    atr14_pct                 0.448
+    mom_15m_pct               0.091
+    mom_30m_pct               0.075
+    orb_width_pct             0.069
+    ema9_21_spread            0.046
+
+  MID_SHORT — top 5 features:
+    atr14_pct                 0.469
+    time_bucket               0.094
+    mom_30m_pct               0.057
+    is_last_hour              0.055
+    mom_15m_pct               0.052
+
+## 2026-06-05 (tester)
+**Strategy:** vwap
+**Trades:** 33 (13W / 20L)
+**PnL:** +Rs1821.45
+
+**Market:** **Nifty 50 was slightly down to flat** in early trade, with the index around **23,340–23,390** and a cautious tone after opening weak; broader market weakness was visible even as some buying appeared near intraday support.[7][4]  
+
+**Major drags** included **TCS (-8.25%)**, **Tech Mahindra (-6.45%)**, **Adani Enterprises (-1.32%)**, and **Adani Ports (-0.71%)**, while **gains in stocks like Wipro (+2.28%)**, **Infosys (+1.44%)**, and **HDFC Life (+1.56%)** helped offset some pressure.[7][3]  
+
+The main market backdrop was **cautious**, with traders watching **FII outflows, crude prices, geopolitics, and the RBI policy decision** as key near-term cues.[1]
+
+**Context:** Global bias was RISK_OFF. 
+
+**Best trade:** GAIL +Rs564.55 (TARGET)
+**Worst trade:** PATANJALI Rs-274.82 (STOPLOSS)
+
+**Edge check:** Loss rate >60% — check if market was choppy/low-volume. Review signal quality.
+
+> WARNING: #stopped-out appears 37x in recent journal. Researcher should review stoploss width.
+
+**Tags:** #bergepaint #clean-exit #dixon #gail #icicibank #irctc #loss #pageind #patanjali #powergrid #recltd #sail #squareoff #stopped-out #tatacomm #trent #voltas #vwap #win
+
+---
+## 2026-06-05 (tester) [enriched]
+**Strategy:** vwap (OPEN + MID windows; mode: paper). NOTE: config active_strategy=orb but ORB fired ZERO signals today — every trade was VWAP.
+**Trades:** 33 (13W / 16L / 4 breakeven). Win rate among decided trades = 13/29 = 45%. (Basic entry mislabeled "20L" by folding the 4 trailing-SL breakevens into losses.)
+**PnL:** +Rs1821.45 (green)
+**Cumulative week PnL:** +Rs1821.45 (2026-06-05 is the first logged session of the week)
+**Market:** Nifty 50 ~23,340–23,390, cautious flat-to-down. Regime CHOPPY essentially all session (brief BULLISH_TREND flip ~11:11, brief BEARISH_TREND ~11:42). Global bias RISK_OFF. VIX 15.9 (low). FII net -Rs4447 Cr (heavy domestic selling). Big drags TCS -8.25%, TechM -6.45%. RBI policy decision a near-term cue.
+
+**Best trade:** GAIL SELL +Rs564.55 (11:42 TARGET) — fired into the brief BEARISH_TREND flip with ml_prob=0.626, consec=0. A short aligned with both the momentary regime and the -Rs4447 Cr FII selling backdrop. This is the one trade where direction matched macro.
+**Worst trade:** PATANJALI BUY -Rs274.82 (12:26 STOPLOSS, ml_prob=0.319, consec=1) — 3rd of 4 PATANJALI entries, a re-entry into a chop-stopped name. Representative of the day's churn rather than uniquely bad.
+
+---
+
+**Pattern analysis:**
+
+**1. Overtrading / symbol round-tripping in CHOPPY — the dominant story.** 33 trades is the highest count in this journal, the entire session was CHOPPY, and the same names were traded repeatedly both directions: RECLTD x3 (SELL/SELL/BUY), PATANJALI x4, GAIL x3, TATACOMM x3, TRENT x3, PAGEIND x3 (all BUY), DIXON x2, VOLTAS x2, ICICIBANK x2, SAIL x2, BERGEPAINT x2. This is churn, not conviction. The green PnL is carried entirely by ~6 big winners (GAIL SELL +564, RECLTD SELL +558, TATACOMM BUY +546, RECLTD BUY +508, VOLTAS BUY +446, GAIL BUY +446 = +Rs3069) offsetting a long tail of ~Rs270 stop-outs. Strip the top 2 winners and the day is roughly flat. No overtrading throttle exists for CHOPPY regime.
+
+**2. PAGEIND traded 3x, all BUY, catalyst LONG/7: +316, -212, -211 = net -107.** Re-entering the same losing long thesis after consecutive stop-outs (cl0 -> cl1 -> cl1). Per-symbol loss memory / re-entry cooldown still absent — the single clearest cost of that missing gate today.
+
+**3. ml_prob floor (#ml-filter-weak, recurring).** The 4 lowest-ml_prob entries — GAIL 0.276, TATACOMM 0.282, SAIL 0.288, ICICIBANK 0.301 — ALL lost or broke even. A 0.30 floor cuts 3-4 pure losers (~-Rs820). BUT the counter-evidence stands: RECLTD SELL 09:49 had ml_prob=0.549 (high) and lost -Rs274 in the OPEN window. #ml-high-prob-open-failure recurs a 5th time. ml_prob is necessary-not-sufficient; high prob at the OPEN window still fails.
+
+**4. Regime-flip whipsaw at 11:11.** TRENT BUY (-260) and DIXON BUY (-254) both fired in the brief BULLISH_TREND flip with consec=2, both stopped out -Rs514 combined. Chasing a momentary regime flip — the flip reverted within the hour (BEARISH by 11:42). A regime-stability filter (require N bars in regime before acting on a flip) would have blocked both.
+
+**5. No catalyst-direction conflict today — note the absence.** Most signals were NEUTRAL catalyst; the directional ones (PAGEIND/POWERGRID) were aligned. The recurring #catalyst-conflict pattern did NOT cost money today. Worth recording the clean case.
+
+**6. Filters actively gating volume.** 911 signals were blocked/shadow-logged today (blocked_signals table). The shadow-log is populating for later would-have-hit analysis — the gating layer is doing heavy lifting even as 33 still passed.
+
+**7. Trailing-SL-to-breakeven working.** 4 clean breakevens (POWERGRID 09:46, TATACOMM 10:15, VOLTAS 11:50, ICICIBANK 12:29) — feature continues to function (#trailing-sl-working, 4th occurrence).
+
+**8. EOD square-off tail.** 5 trades force-closed 13:13–14:53: SAIL +346, IRCTC +232, BERGEPAINT +143, RECLTD -25, PATANJALI -1, POWERGRID -25. Net +Rs670 from square-offs — late-session carries were modestly positive, no disorderly EOD bleed.
+
+---
+
+**Recurring patterns (last 20 tester sessions, >=3 occurrences; updated):**
+
+| Pattern | Count | Note |
+|---|---|---|
+| `#stopped-out` | 13 | 16 stop-outs today; ~Rs270 each, the long tail |
+| `#choppy-market` | 5 | 100% of session CHOPPY again |
+| `#shallow-deviation` | 4 | not the lead failure today but persists |
+| `#ml-high-prob-open-failure` | 5 | RECLTD SELL 0.549 lost at OPEN |
+| `#ml-filter-weak` | 5 | 4 sub-0.30 entries all lost/BE |
+| `#fakeout` | 3 | 11:11 regime-flip whipsaw |
+| `#trailing-sl-working` | 4 | 4 clean breakevens |
+| `#risk-off` | 4 | global bias RISK_OFF, FII -4447 Cr |
+| `#catalyst-conflict` | 3 | did NOT recur today (clean) |
+| `#winning-day` | 1 | +Rs1821.45 |
+| `#overtrading` | NEW | 33 trades, heavy same-symbol round-tripping |
+
+---
+
+**Edge check:** Green day (+Rs1821.45) but this is NOT a demonstration of edge. 45% decided win rate in a CHOPPY/RISK_OFF tape, with PnL concentrated in ~6 outsized winners against a long tail of ~Rs270 stop-outs, is the signature of variance favorably distributing across high trade count — not repeatable signal quality. The same structural gaps fired again: no overtrading throttle (33 trades), no per-symbol re-entry cooldown (PAGEIND -107 net over 3 longs), no ml_prob floor (4 sub-0.30 losers), no regime-stability gate (11:11 whipsaw). Strip the top 2 winners and the day is flat. Process unchanged; outcome favorable by variance. Do not read the green as validation.
+
+**For researcher Sunday:**
+- **ml_prob floor (still unimplemented, #ml-filter-weak 5th):** 0.30 floor would have cut SAIL/GAIL/TATACOMM/ICICIBANK (~-Rs820). Caveat: keep monitoring #ml-high-prob-open-failure (RECLTD 0.549) — a floor alone does not fix the OPEN-window failure mode.
+- **Per-symbol re-entry cooldown / loss memory (CRITICAL, recurring):** PAGEIND 3x all BUY = -Rs107 net; PATANJALI 4x. Block re-entry into a name within N minutes of a stop-out, or after K losses on that symbol intra-day.
+- **Overtrading throttle in CHOPPY regime (NEW, escalate):** 33 trades in an all-CHOPPY session is churn. Cap trades-per-session or trades-per-symbol when regime=CHOPPY; ties to the unimplemented filter backlog.
+- **Regime-stability gate (NEW):** require N consecutive bars in a regime before acting on a flip. 11:11 BULLISH flip (TRENT+DIXON BUY, -Rs514) reverted to BEARISH by 11:42.
+- These four tie directly to the standing filter backlog (7 filters flagged CRITICAL for 5-9 sessions).
+
+**Tags:** #vwap #orb #choppy-market #winning-day #overtrading #stopped-out #ml-filter-weak #ml-high-prob-open-failure #trailing-sl-working #fakeout #risk-off #low-volume #gail #recltd #tatacomm #voltas #pageind #patanjali #sail #icicibank #squareoff
+
+---
+---
+## ML Retrain — 2026-06-05 16:04 IST (IST)
+Feedback signals used: 1433
+
+### OPEN window | deployed=YES | threshold 0.280 -> 0.300
+  long/sharpe: -13.737 -> -13.743
+  long/win_rate: 0.297 -> 0.297
+  long/n_signals: 84054 -> 83986
+  short/sharpe: -14.254 -> -14.23
+  short/win_rate: 0.312 -> 0.313
+  short/n_signals: 79813 -> 79692
+
+### MID window | deployed=YES | threshold 0.250 -> 0.250
+  long/sharpe: -21.427 -> -21.426
+  long/win_rate: 0.205 -> 0.205
+  long/n_signals: 439777 -> 439595
+  short/sharpe: -20.388 -> -20.393
+  short/win_rate: 0.22 -> 0.22
+  short/n_signals: 438369 -> 438672
+
+### Feature importance
+  OPEN_LONG — top 5 features:
+    is_first_30min            0.185
+    atr14_pct                 0.179
+    vol_surge_5d              0.097
+    orb_width_pct             0.073
+    mom_15m_pct               0.056
+
+  OPEN_SHORT — top 5 features:
+    is_first_30min            0.322
+    atr14_pct                 0.205
+    time_bucket               0.084
+    orb_width_pct             0.052
+    mom_15m_pct               0.041
+
+  MID_LONG — top 5 features:
+    atr14_pct                 0.457
+    mom_15m_pct               0.085
+    mom_30m_pct               0.079
+    orb_width_pct             0.063
+    ema9_21_spread            0.044
+
+  MID_SHORT — top 5 features:
+    atr14_pct                 0.458
+    time_bucket               0.093
+    is_last_hour              0.058
+    mom_30m_pct               0.058
+    vwap_dev_pct              0.055
+
+---
+## ML Retrain — 2026-06-05 22:25 IST (IST)
+Feedback signals used: 1433
+
+### OPEN window | deployed=YES | threshold 0.300 -> 0.300
+  long/sharpe: -13.693 -> -13.693
+  long/win_rate: 0.298 -> 0.298
+  long/n_signals: 82462 -> 82462
+  short/sharpe: -14.015 -> -14.015
+  short/win_rate: 0.317 -> 0.317
+  short/n_signals: 77642 -> 77642
+
+### MID window | deployed=YES | threshold 0.250 -> 0.250
+  long/sharpe: -21.426 -> -21.426
+  long/win_rate: 0.205 -> 0.205
+  long/n_signals: 439595 -> 439595
+  short/sharpe: -20.393 -> -20.393
+  short/win_rate: 0.22 -> 0.22
+  short/n_signals: 438672 -> 438672
+
+### Feature importance
+  OPEN_LONG — top 5 features:
+    is_first_30min            0.185
+    atr14_pct                 0.179
+    vol_surge_5d              0.097
+    orb_width_pct             0.073
+    mom_15m_pct               0.056
+
+  OPEN_SHORT — top 5 features:
+    is_first_30min            0.322
+    atr14_pct                 0.205
+    time_bucket               0.084
+    orb_width_pct             0.052
+    mom_15m_pct               0.041
+
+  MID_LONG — top 5 features:
+    atr14_pct                 0.457
+    mom_15m_pct               0.085
+    mom_30m_pct               0.079
+    orb_width_pct             0.063
+    ema9_21_spread            0.044
+
+  MID_SHORT — top 5 features:
+    atr14_pct                 0.458
+    time_bucket               0.093
+    is_last_hour              0.058
+    mom_30m_pct               0.058
+    vwap_dev_pct              0.055
+
+## 2026-06-08 (tester)
+**Strategy:** vwap, orb
+**Trades:** 7 (1W / 6L)
+**PnL:** Rs-1338.85
+
+**Market:** Indian markets were **weak today**, with Nifty 50 trading lower and extending a cautious-to-bearish tone; one live snapshot shows it around **23,123 (-1.04%)**, while another earlier quote had it near **23,366 (-0.21%)**. [4][2]  
+
+**Major drags** included **Nifty IT** (down about **1.7%**), with **Infosys, TCS and Wipro** under pressure from the global tech selloff; **auto** also fell sharply, while **IndiGo** slipped on higher crude and Airbus delivery concerns. [4]
+
+**Context:** Global bias was RISK_ON. Skipped event-risk stocks: TATASTEEL, VEDL.
+
+**Best trade:** TECHM +Rs8.18 (SQUAREOFF)
+**Worst trade:** RECLTD Rs-273.78 (STOPLOSS)
+
+**Edge check:** Loss rate >60% — check if market was choppy/low-volume. Review signal quality.
+
+> WARNING: #stopped-out appears 41x in recent journal. Researcher should review stoploss width.
+
+**Tags:** #ambujacem #loss #ltts #orb #recltd #stopped-out #tatacomm #techm #vedl #vwap #win
+
+---
+
+## 2026-06-08 (tester) [enriched]
+**Strategy:** vwap (OPEN + MID windows; mode: paper) + 1 orb. Mixed: 6 VWAP, 1 ORB (LTTS, first trade). Config active_strategy may read orb, but ORB fired exactly 1 signal; the day was a VWAP day.
+**Trades:** 7 — corrected scorecard 0 real wins / 5 full stop-outs / 2 breakeven. (Basic auto-entry mislabeled "1W/6L": it counted TECHM +Rs8.18 as a "win" — it is a timed square-off, not edge — and folded the VEDL Rs0.00 breakeven into losses.) Decided win rate = 0/5 = 0%.
+**PnL:** -Rs1338.85 (-0.13% on Rs1,000,000)
+**Cumulative week PnL:** +Rs482.60 (06-05 +Rs1821.45, 06-08 -Rs1338.85)
+**Market:** Nifty 50 weak, ~-1% (snapshots 23,123 / 23,366). Regime mostly CHOPPY (1 BULLISH_TREND open on LTTS, 1 BEARISH_TREND on TECHM 10:04). VIX 15.8 (low). IT (-1.7%, INFY/TCS/WIPRO) and auto leading down. FII net -Rs8776 Cr — very heavy selling, the heaviest in recent sessions.
+**Context:** global_bias label = RISK_ON — INCONSISTENT with a -Rs8776 Cr FII tape (see pattern 4). Skipped event-risk: TATASTEEL, VEDL (VEDL still traded once at 11:51).
+
+**Best trade:** TECHM SELL +Rs8.18 (11:50 SQUAREOFF, ml_prob=0.319, consec=4). Flagged honestly: this is NOT the best trade by edge — it is a near-breakeven timed square-off that happened to print fractionally green. There was no winning trade today. Calling it "best" is a formatting artifact.
+**Worst trade:** RECLTD SELL -Rs273.78 (10:34 STOPLOSS, ml_prob=0.548, RSI=75.8 overbought, catalyst SHORT/7 ALIGNED — Q4 profit -22% YoY + downgrades, consec=2 at entry). The single most structurally-justified short of the day — aligned catalyst, overbought, matched the risk-off tape — and it still stopped. Largest single loss; representative of the day's core problem, not a one-off.
+
+---
+
+**Pattern analysis:**
+
+**1. Clean-setup stop-outs — losses were NOT direction error, they were STOPLOSS WIDTH / CHOPPY whipsaw.** Trades 2 (AMBUJACEM), 3 (TATACOMM), 5 (RECLTD) all had catalyst ALIGNED with signal direction. #catalyst-conflict did NOT recur (mirrors the 06-05 clean case). These were structurally-clean setups that still stopped on the 0.5% SL inside CHOPPY chop. The lever is SL width / regime, not signal direction. Record explicitly.
+
+**2. #ml-high-prob-open-failure recurs (6th occurrence) — strongest case yet.** TATACOMM BUY 09:53, ml_prob=0.768 (highest of day), catalyst LONG/3 ALIGNED, RSI=21.8 deep oversold, vol_ratio_5m=3.89 big surge, vwap_dev=-0.99% — confirmed on every single metric — and STILL stopped out in the OPEN window. This is the cleanest evidence to date that ml_prob is not predictive at the OPEN window. A plain ml_prob floor does NOT fix this failure mode; it would have passed this trade.
+
+**3. Soft-pause-after-2-consecutive-losses would have saved the late tail.** consec_losses climbed to 4 today; the hard halt is 5, so it never tripped. A soft-pause at 2 consecutive losses would have blocked trades 5 (RECLTD -274), 6 (TECHM +8), 7 (VEDL 0) = net ~-Rs265 saved. Flagged unimplemented since 2026-04-30. Today is a concrete dated cost.
+
+**4. FII/global_bias label inconsistency recurs (first noted 2026-05-05).** FII net -Rs8776 Cr (very heavy selling) yet global_bias=RISK_ON. The tape was clearly risk-off; the label disagrees and suppressed nothing. Worse, RISK_ON arguably greenlit the morning longs (LTTS/AMBUJACEM/TATACOMM all BUY) into a selling tape — the three earliest stop-outs. The label is not just cosmetic; it may be actively misdirecting morning bias.
+
+**5. Early bleed then flatline.** 5 straight stop-outs by 10:34 (~Rs265-274 each, uniform sizing), then 2 near-breakeven trades (TECHM +8, VEDL 0) once consec was high. Low VIX (15.8), weak tape (-1%), IT/auto down. The damage was front-loaded in the first 50 minutes — the OPEN window again.
+
+**6. VEDL breakeven exit — system worked here.** VEDL BUY 11:51 exited at entry price (Rs0.00), ml_prob=0.349, sym_win_rate_10=0.11, stock_sentiment=-1. A name with an 11% recent win rate and negative sentiment that the system scratched at flat rather than letting bleed. Trailing-SL-to-breakeven functioning (#trailing-sl-working).
+
+---
+
+**Recurring patterns (last 20 tester sessions, >=3 occurrences; updated):**
+
+| Pattern | Count | Note |
+|---|---|---|
+| `#stopped-out` | 18 | 5 more today; uniform ~Rs265-274 each |
+| `#choppy-market` | 6 | mostly CHOPPY again |
+| `#ml-high-prob-open-failure` | 6 | TATACOMM 0.768 lost at OPEN — cleanest case yet |
+| `#ml-filter-weak` | 5 | floor would not fix the 0.768 OPEN failure |
+| `#risk-off` | 5 | FII -8776 Cr (heaviest), tape -1% |
+| `#trailing-sl-working` | 4 | VEDL scratched flat |
+| `#catalyst-conflict` | 3 | did NOT recur today (clean) |
+| `#losing-day` | NEW | -Rs1338.85, 0 real wins |
+
+---
+
+**Edge check:** Edge, not variance — and the read is negative-confirming. Unlike 06-05 (green by variance), today the losses were CLEAN: trades 2/3/5 had aligned catalysts, oversold/overbought RSI, volume confirmation, and the highest ml_prob of the day (TATACOMM 0.768) — and all stopped. When the best-constructed setups by every available metric still fail, the failure is structural (0.5% SL too tight for CHOPPY whipsaw + OPEN-window noise), not signal selection. Low trade count (7) limits statistical weight, but the direction is consistent with 5 prior sessions. Process adhered: strategy executed as designed, no risk-limit breach, sizing uniform. The design itself is the problem, not the discipline.
+
+**For researcher Sunday:**
+- **Soft-pause-after-2-consecutive-losses (CRITICAL, unimplemented since 2026-04-30):** dated cost today = ~-Rs265 (would have blocked trades 5/6/7). Hard halt at 5 is too loose; consec reached 4. Add a soft cooldown at 2.
+- **OPEN-window ml_prob is non-predictive (#ml-high-prob-open-failure, 6th):** TATACOMM 0.768 fully-confirmed setup lost at OPEN. Do NOT ship a plain ml_prob floor expecting it to fix this — it passes the 0.768 trade. Consider an OPEN-window-specific gate (wider confirmation, delayed entry, or skip OPEN entirely for VWAP).
+- **Stoploss width / regime-aware SL (escalate):** 5 clean setups stopped on 0.5% SL in CHOPPY. Test wider SL or volatility-scaled SL in CHOPPY regime; the long tail of uniform ~Rs270 stop-outs is the recurring bleed.
+- **FII/global_bias label fix (recurring since 2026-05-05):** -Rs8776 Cr FII = risk-off, label said RISK_ON. Reconcile the label to the FII/tape; it may have greenlit the morning longs into a selling tape.
+- These four tie directly to the standing filter backlog (7 filters flagged CRITICAL for 5-9 sessions).
+
+**Tags:** #vwap #orb #choppy-market #losing-day #stopped-out #ml-high-prob-open-failure #ml-filter-weak #trailing-sl-working #risk-off #low-volume #event-risk-realized #ltts #ambujacem #tatacomm #techm #recltd #vedl #squareoff
+
+---
+---
+---
+## ML Retrain — 2026-06-08 16:04 IST (IST)
+Feedback signals used: 1828
+
+### OPEN window | deployed=NO | threshold 0.300 -> 0.300
+  long/sharpe: -12.665 -> -12.685
+  long/win_rate: 0.308 -> 0.308
+  long/n_signals: 82456 -> 82613
+  short/sharpe: -15.221 -> -15.249
+  short/win_rate: 0.301 -> 0.301
+  short/n_signals: 77678 -> 77801
+
+### MID window | deployed=YES | threshold 0.250 -> 0.250
+  long/sharpe: -21.513 -> -21.523
+  long/win_rate: 0.203 -> 0.203
+  long/n_signals: 439556 -> 440049
+  short/sharpe: -20.621 -> -20.615
+  short/win_rate: 0.216 -> 0.217
+  short/n_signals: 438549 -> 438193
+
+### Feature importance
+  OPEN_LONG — top 5 features:
+    is_first_30min            0.185
+    atr14_pct                 0.179
+    vol_surge_5d              0.097
+    orb_width_pct             0.073
+    mom_15m_pct               0.056
+
+  OPEN_SHORT — top 5 features:
+    is_first_30min            0.322
+    atr14_pct                 0.205
+    time_bucket               0.084
+    orb_width_pct             0.052
+    mom_15m_pct               0.041
+
+  MID_LONG — top 5 features:
+    atr14_pct                 0.453
+    mom_15m_pct               0.086
+    mom_30m_pct               0.080
+    orb_width_pct             0.065
+    ema9_21_spread            0.044
+
+  MID_SHORT — top 5 features:
+    atr14_pct                 0.449
+    time_bucket               0.095
+    is_last_hour              0.060
+    mom_15m_pct               0.055
+    orb_width_pct             0.052
+
+## 2026-06-09 (tester)
+**Strategy:** vwap
+**Trades:** 4 (0W / 4L)
+**PnL:** Rs-1091.64
+
+**Market:** Indian markets were **mixed to slightly firmer** in early trade: Nifty 50 was around **23,242, up 0.52%**, while Sensex gained about **395 points** and Bank Nifty outperformed with a **2.09%** rise[4]. Biggest movers mentioned included **Bank Nifty/banking stocks**, **auto stocks**, and individual names like **Vodafone Idea** and **NLC India**; headline drivers were the **RBI forex swap facility**, **GIFT Nifty weakness**, and **geopolitical tension in Iran** keeping sentiment cautious[4].
+
+**Context:** Global bias was RISK_OFF. Skipped event-risk stocks: SAIL, BEL, BERGEPAINT.
+
+**Best trade:** HINDALCO Rs-270.18 (STOPLOSS)
+**Worst trade:** CANBK Rs-274.51 (STOPLOSS)
+
+**Edge check:** Variance, but with a directional bias. All 4 were the *same* setup — VWAP-fade SHORT (price X% above VWAP, short back to VWAP) on a GAP-DOWN day in a CHOPPY/RISK_OFF regime. In every case price kept recovering upward (intraday reversion bounce) and ran the short over. Near-identical losses (~-Rs270 each) confirm fixed-risk sizing worked as designed; the *direction* was wrong, not the sizing. Shorting oversold gap-down bounces is fighting the reversion — the fade-short logic is backwards for this regime.
+
+> WARNING: #stopped-out appears 45x in recent journal. Researcher should review stoploss width.
+
+**Insights:**
+- **Fade-short into bounce (root cause):** All 4 shorts faded a move above VWAP on gap-down days; price reverted up. This is shorting oversold bounces. Likely a meaningful contributor to the recurring #stopped-out cluster (now 45x, already WARNING-flagged) — flag for Sunday researcher review (no change now).
+- **ML gate ineffective:** 3 of 4 entries had ml_prob < 0.50 (0.36, 0.47, 0.30) yet still traded. HINDALCO at 0.30 (VERY LOW) should likely have been blocked.
+- **Cooldown likely breached:** cooldown_after_sl_minutes=90, but CANBK SL 10:22 → BERGEPAINT 10:34 (12m) and UNIONBANK SL 12:19 → HINDALCO 12:35 (16m). VWAP's own cooldown_minutes=5 may be overriding the account-level 90m. Config/logic question for weekly review.
+- **Watchlist drift:** BERGEPAINT and HINDALCO are not in tester's configured watchlist.
+- **Context contradiction:** Entry's Context line lists BERGEPAINT as a SKIPPED event-risk stock, but it was actually traded (Trade 2, -Rs272.69).
+- **Strategy mismatch:** active_strategy="orb" but zero ORB trades fired (orb has _strategist_suppress_long=true); all 4 trades came from vwap.
+
+**Tags:** #bergepaint #canbk #hindalco #loss #losing-day #stopped-out #unionbank #vwap #vwap-fade #vwap-fade-fail #gap-down-bounce #short-squeeze #choppy-market #ml-gate-ignored #cooldown-breach #watchlist-drift #fakeout
+
+---
+---
+## ML Retrain — 2026-06-09 16:02 IST (IST)
+Feedback signals used: 3588
+
+### OPEN window | deployed=YES | threshold 0.300 -> 0.300
+  long/sharpe: -13.029 -> -13.036
+  long/win_rate: 0.303 -> 0.303
+  long/n_signals: 82196 -> 82323
+  short/sharpe: -14.969 -> -14.954
+  short/win_rate: 0.304 -> 0.304
+  short/n_signals: 77275 -> 76956
+
+### MID window | deployed=YES | threshold 0.250 -> 0.250
+  long/sharpe: -22.035 -> -22.031
+  long/win_rate: 0.197 -> 0.197
+  long/n_signals: 439905 -> 439419
+  short/sharpe: -20.427 -> -20.43
+  short/win_rate: 0.216 -> 0.216
+  short/n_signals: 437848 -> 437957
+
+### Feature importance
+  OPEN_LONG — top 5 features:
+    is_first_30min            0.196
+    atr14_pct                 0.187
+    vol_surge_5d              0.090
+    orb_width_pct             0.080
+    mom_15m_pct               0.052
+
+  OPEN_SHORT — top 5 features:
+    is_first_30min            0.280
+    atr14_pct                 0.232
+    time_bucket               0.089
+    orb_width_pct             0.056
+    mom_15m_pct               0.043
+
+  MID_LONG — top 5 features:
+    atr14_pct                 0.455
+    mom_15m_pct               0.090
+    mom_30m_pct               0.080
+    orb_width_pct             0.062
+    time_bucket               0.043
+
+  MID_SHORT — top 5 features:
+    atr14_pct                 0.455
+    time_bucket               0.092
+    mom_15m_pct               0.058
+    is_last_hour              0.057
+    vwap_dev_pct              0.053
+
+## 2026-07-06 (us_trader)
+**Strategy:** vwap
+**Trades:** 8 (3W / 5L)
+**PnL:** +$174.86 (+0.17% on $100k)
+
+**Market:** US session risk_on. VIX 15.9 (NORMAL regime). Per-symbol sentiment positive for AAPL, TSLA, AMD, META, MSFT; neutral for SPY, QQQ, NVDA.
+
+**Best trade:** META +$106.73 (TARGET)
+**Worst trade:** TSLA -$24.98 (STOPLOSS)
+
+**Notes:** Green day, but the win came from R-multiple, not hit rate. Five small stoplosses (META $0.00, META -$23.90, TSLA -$24.98, AMD -$22.31, TSLA -$8.62) were outweighed by three larger targets (META +$106.73, TSLA +$101.33, TSLA +$46.61). 37.5% win rate is a caution flag, not something to celebrate. Heavy same-symbol re-entry — META traded 3× (2 SL then 1 target), TSLA 4× (mixed) — suggests the VWAP shorts keep probing the same names after stopping out; watch cooldown/churn. First shorts of the session stopped out back-to-back before the targets came in later.
+
+**Edge check:** Low trade count + 37.5% hit rate = mostly variance carried by R-multiple. Not confirmed edge.
+
+> WARNING: #stopped-out appears 48x in recent journal. Researcher should review stoploss width.
+
+**Tags:** #vwap #meta #tsla #amd #stopped-out #same-symbol-churn #low-hit-rate #green-day #r-multiple-carry
+
+---
+---
+## ML Retrain — 2026-07-07 02:19 IST (IST)
+Feedback signals used: 4206
+
+### OPEN window | deployed=YES | threshold 0.300 -> 0.300
+  long/sharpe: -13.036 -> -13.039
+  long/win_rate: 0.303 -> 0.303
+  long/n_signals: 82323 -> 82314
+  short/sharpe: -14.954 -> -14.974
+  short/win_rate: 0.304 -> 0.304
+  short/n_signals: 76956 -> 77126
+
+### MID window | deployed=YES | threshold 0.250 -> 0.250
+  long/sharpe: -22.031 -> -22.031
+  long/win_rate: 0.197 -> 0.197
+  long/n_signals: 439419 -> 439582
+  short/sharpe: -20.43 -> -20.431
+  short/win_rate: 0.216 -> 0.216
+  short/n_signals: 437957 -> 437976
+
+### Feature importance
+  OPEN_LONG — top 5 features:
+    is_first_30min            0.192
+    atr14_pct                 0.175
+    vol_surge_5d              0.088
+    orb_width_pct             0.077
+    mom_15m_pct               0.050
+
+  OPEN_SHORT — top 5 features:
+    atr14_pct                 0.247
+    is_first_30min            0.211
+    time_bucket               0.100
+    orb_width_pct             0.059
+    mom_15m_pct               0.046
+
+  MID_LONG — top 5 features:
+    atr14_pct                 0.461
+    mom_15m_pct               0.091
+    mom_30m_pct               0.080
+    orb_width_pct             0.064
+    time_bucket               0.044
+
+  MID_SHORT — top 5 features:
+    atr14_pct                 0.455
+    time_bucket               0.092
+    is_last_hour              0.060
+    mom_15m_pct               0.059
+    vwap_dev_pct              0.054
+
+## 2026-07-07 (us_trader)
+**Strategy:** vwap
+**Trades:** 2 (1W / 1L)
+**PnL:** +$69.70 (+0.07%)
+
+**Market:** Global bias neutral. VIX 15.85 (NORMAL regime). Per-symbol sentiment mildly constructive on tech: AAPL +1, MSFT +1, AMD +1, NVDA +1; TSLA, SPY, QQQ flat (0). No macro catalyst — quiet, low-conviction tape.
+
+**Best trade:** NVDA short +$69.70 (TARGET) — clean move from 199.02 down to 196.23, single R-multiple winner that carried the day.
+**Worst trade:** TSLA short +$0.00 (STOPLOSS) — scratched at breakeven, stopped out flat at 408.575.
+
+**What worked:** One NVDA short reached target; VWAP short thesis paid on the name with the strongest bearish follow-through.
+**What didn't:** TSLA (sentiment 0) never trended and scratched. Both trades were VWAP shorts probing the same large-caps — same pattern as 2026-07-06.
+
+**Edge check:** Not edge. 2 trades, one winner carrying a green day that is +0.07% — essentially flat. Sample far too small to conclude anything; treat as variance / low-activity day. Do not celebrate.
+
+> WARNING: #stopped-out appears 52x in recent journal. Researcher should review stoploss width.
+
+**Tags:** #vwap #nvda #tsla #short #stopped-out #green-day #flat #small-sample #r-multiple-carry #win #loss
+
+---
+---
+## US ML Retrain — 2026-07-08 14:34 ET | account=us_trader
+Trades used: 10 | Deployed: YES
+  short: win=33.3% sharpe=-12.58 signals=6 precision=66.7%
