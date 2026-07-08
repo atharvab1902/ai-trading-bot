@@ -95,6 +95,12 @@
     color: #d4a017; border-radius: 8px; padding: 10px 16px;
     font-size: 12px; margin-bottom: 20px;
   }
+
+  .status-dot {
+    width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+  }
+  .status-dot.green { background: #22c55e; box-shadow: 0 0 6px #22c55e88; }
+  .status-dot.red   { background: #ef4444; }
 </style>
 </head>
 <body>
@@ -182,6 +188,49 @@
                  placeholder="{{ masked.TELEGRAM_CHAT_ID or 'Enter your Telegram chat ID' }}">
         </div>
       </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">🔍 Perplexity — News & Market Intel</div>
+
+      <div class="field">
+        <label for="PERPLEXITY_API_KEY">API Key</label>
+        <div class="input-wrap">
+          <input type="password" id="PERPLEXITY_API_KEY" name="PERPLEXITY_API_KEY"
+                 placeholder="{{ masked.PERPLEXITY_API_KEY or 'Enter your Perplexity API key' }}">
+          <button type="button" class="toggle-eye" onclick="toggleVis('PERPLEXITY_API_KEY', this)">👁</button>
+        </div>
+        <div class="hint">Used for premarket news and stock research. Get from perplexity.ai → API</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">🤖 Claude Code — AI Analysis</div>
+
+      <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
+        <span class="status-dot {{ 'green' if claude.connected else 'red' }}"></span>
+        <span style="font-size:13px;">
+          {% if claude.connected %}
+            Connected{% if claude.account %} as <strong>{{ claude.account }}</strong>{% endif %}
+          {% elif claude.expired %}
+            Session expired — please re-login
+          {% else %}
+            Not logged in
+          {% endif %}
+        </span>
+      </div>
+
+      {% if not claude.connected %}
+      <div class="hint" style="background:#1c2030; border:1px solid #30363d; border-radius:8px; padding:10px 14px; font-size:12px; color:#b0bec5; line-height:1.6;">
+        Claude Code uses browser-based login, not an API key.<br>
+        Run this in your terminal to connect:<br>
+        <code style="color:#58a6ff; font-family:monospace;">claude login</code>
+      </div>
+      {% else %}
+      <div class="hint" style="color:#22c55e;">
+        Claude Code is connected. No action needed — the bot uses your existing login.
+      </div>
+      {% endif %}
     </div>
 
     <button type="submit" class="save-btn">Save Settings</button>

@@ -5,10 +5,11 @@ Usage:
     Then open http://localhost:5000 in your browser.
 """
 
+import json
 import sqlite3
 import subprocess
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import psutil
@@ -31,7 +32,35 @@ ENV_KEYS = [
     "DHAN_CLIENT_ID", "DHAN_ACCESS_TOKEN",
     "ALPACA_API_KEY", "ALPACA_SECRET_KEY",
     "TELEGRAM_BOT_TOKEN", "TELEGRAM_CHAT_ID",
+    "PERPLEXITY_API_KEY",
 ]
+
+PLAIN_KEYS = {"DHAN_CLIENT_ID", "TELEGRAM_CHAT_ID"}  # not masked
+
+
+def claude_connection() -> dict:
+    creds = Path.home() / ".claude" / ".credentials.json"
+    if not creds.exists():
+        return {"connected": False, "account": None, "expired": False}
+    try:
+        data = json.loads(creds.read_text())
+        # credentials.json can be {claudeAiOauth: {accessToken, expiresAt, ...}}
+        oauth = data.get("claudeAiOauth", data)
+        expires_at = oauth.get("expiresAt")
+        expired = False
+        if expires_at:
+            try:
+                exp_ms = int(expires_at)
+                expired = exp_ms < datetime.now(timezone.utc).timestamp() * 1000
+            except (ValueError, TypeError):
+                pass
+        return {
+            "connected": not expired,
+            "account":   oauth.get("account", {}).get("emailAddress") if isinstance(oauth.get("account"), dict) else None,
+            "expired":   expired,
+        }
+    except Exception:
+        return {"connected": False, "account": None, "expired": False}
 
 
 # ── process management ────────────────────────────────────────────────────────
@@ -217,12 +246,13 @@ def settings():
     masked = {}
     for k in ENV_KEYS:
         v = current.get(k, "")
-        if v and k not in ("DHAN_CLIENT_ID", "TELEGRAM_CHAT_ID"):
+        if v and k not in PLAIN_KEYS:
             masked[k] = v[:4] + "•" * max(0, len(v) - 4)
         else:
             masked[k] = v
 
-    return render_template("settings.html", masked=masked, saved=saved)
+    return render_template("settings.html", masked=masked, saved=saved,
+                           claude=claude_connection())
 
 
 if __name__ == "__main__":
