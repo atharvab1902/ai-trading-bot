@@ -29,7 +29,11 @@ IST = pytz.timezone("Asia/Kolkata")
 load_dotenv(REPO_ROOT / ".env")
 
 PERPLEXITY_KEY = os.environ.get("PERPLEXITY_API_KEY", "")
-CLAUDE_CMD = r"C:\Users\athar\AppData\Roaming\npm\claude.cmd"
+import shutil as _shutil
+CLAUDE_CMD = (
+    _shutil.which("claude")
+    or r"C:\Users\athar\AppData\Roaming\npm\claude.cmd"
+)
 DB_PATH = REPO_ROOT / "data" / "market.duckdb"
 IDS_PATH = REPO_ROOT / "data" / "nifty100_security_ids.json"
 
