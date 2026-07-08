@@ -76,7 +76,11 @@ def log(msg: str):
         pass
 
 
-CLAUDE_CMD = r"C:\Users\athar\AppData\Roaming\npm\claude.cmd"
+import shutil as _shutil
+CLAUDE_CMD = (
+    _shutil.which("claude")
+    or r"C:\Users\athar\AppData\Roaming\npm\claude.cmd"
+)
 
 
 def run(cmd: list, blocking: bool = True, shell: bool = False):

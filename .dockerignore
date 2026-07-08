@@ -1,0 +1,12 @@
+.env
+.venv
+venv
+__pycache__
+*.pyc
+*.pyo
+logs/
+data/scorer_bars_*.json
+data/premarket_*.json
+data/postmarket_*.json
+data/watchlist_*.json
+.git
