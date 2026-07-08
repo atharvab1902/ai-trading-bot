@@ -54,13 +54,16 @@
     text-transform: uppercase; letter-spacing: .05em; margin-bottom: 16px;
   }
 
-  .field { margin-bottom: 14px; }
-  .field:last-child { margin-bottom: 0; }
+  .field { margin-bottom: 16px; }
+  .field:last-of-type { margin-bottom: 0; }
 
-  label {
-    display: block; font-size: 12px; font-weight: 600;
-    color: #8b949e; margin-bottom: 5px; letter-spacing: .02em;
+  .field-label-row {
+    display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;
   }
+  label { font-size: 12px; font-weight: 600; color: #8b949e; letter-spacing: .02em; }
+
+  .badge-saved   { font-size: 10px; font-weight: 700; color: #22c55e; background: #0d3321; border: 1px solid #22c55e44; padding: 2px 7px; border-radius: 99px; }
+  .badge-not-set { font-size: 10px; font-weight: 700; color: #f97316; background: #2d1800; border: 1px solid #f9731644; padding: 2px 7px; border-radius: 99px; }
 
   .input-wrap { position: relative; }
 
@@ -72,16 +75,15 @@
     font-family: "Courier New", monospace;
   }
   input:focus { border-color: #58a6ff; }
-  input::placeholder { color: #484f58; }
+  input::placeholder { color: #6e7681; font-style: normal; }
 
   .toggle-eye {
     position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
-    background: none; border: none; cursor: pointer; color: #8b949e;
-    font-size: 14px; padding: 2px;
+    background: none; border: none; cursor: pointer; color: #8b949e; font-size: 14px; padding: 2px;
   }
   .toggle-eye:hover { color: #e6edf3; }
 
-  .hint { font-size: 11px; color: #484f58; margin-top: 4px; }
+  .hint { font-size: 11px; color: #484f58; margin-top: 5px; }
 
   .save-btn {
     width: 100%; padding: 11px; background: #238636; color: #fff;
@@ -90,17 +92,39 @@
   }
   .save-btn:hover { opacity: 0.85; }
 
-  .warning {
-    background: #2d1e00; border: 1px solid #856404;
-    color: #d4a017; border-radius: 8px; padding: 10px 16px;
-    font-size: 12px; margin-bottom: 20px;
-  }
-
-  .status-dot {
-    width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
-  }
+  /* Claude status */
+  .claude-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .claude-left { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+  .status-dot  { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
   .status-dot.green { background: #22c55e; box-shadow: 0 0 6px #22c55e88; }
   .status-dot.red   { background: #ef4444; }
+
+  .btn-disconnect {
+    background: #2d1515; color: #ef4444; border: 1px solid #ef444433;
+    border-radius: 6px; padding: 5px 12px; font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: background 0.15s;
+  }
+  .btn-disconnect:hover { background: #3d1f1f; }
+
+  .code-hint {
+    background: #1c2030; border: 1px solid #30363d; border-radius: 8px;
+    padding: 10px 14px; font-size: 12px; color: #b0bec5; line-height: 1.7;
+  }
+  .code-hint code { color: #58a6ff; font-family: "Courier New", monospace; }
+  .connected-note { font-size: 12px; color: #8b949e; }
+
+  .btn-connect {
+    background: #1f6feb; color: #fff; border: none;
+    border-radius: 6px; padding: 6px 14px; font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: opacity 0.15s;
+  }
+  .btn-connect:hover { opacity: 0.85; }
+  .btn-connect:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .oauth-instruction {
+    background: #1c2030; border: 1px solid #30363d; border-radius: 8px;
+    padding: 12px 14px; font-size: 12px; color: #b0bec5; line-height: 1.8;
+  }
 </style>
 </head>
 <body>
@@ -112,142 +136,230 @@
 
 <main>
   <div class="page-title">Settings</div>
-  <div class="page-sub">API keys are saved to your local .env file — never shared or uploaded.</div>
+  <div class="page-sub">Paste a new value to update. Leave blank to keep what's already saved.</div>
 
   {% if saved %}
   <div class="saved-banner">✓ Settings saved successfully.</div>
   {% endif %}
 
-  <div class="warning">
-    ⚠ Leave a field blank to keep the existing value. Filling a field will overwrite it.
-  </div>
-
   <form method="POST" action="/settings">
 
+    <!-- Dhan -->
     <div class="section">
       <div class="section-title">🇮🇳 Dhan — India Bot</div>
 
       <div class="field">
-        <label for="DHAN_CLIENT_ID">Client ID</label>
+        <div class="field-label-row"><label>Client ID</label></div>
         <div class="input-wrap">
-          <input type="text" id="DHAN_CLIENT_ID" name="DHAN_CLIENT_ID"
+          <input type="text" name="DHAN_CLIENT_ID"
                  placeholder="{{ masked.DHAN_CLIENT_ID or 'Enter your Dhan client ID' }}">
         </div>
       </div>
 
       <div class="field">
-        <label for="DHAN_ACCESS_TOKEN">Access Token</label>
+        <div class="field-label-row">
+          <label>Access Token</label>
+          <span class="{{ 'badge-saved' if masked.DHAN_ACCESS_TOKEN else 'badge-not-set' }}">
+            {{ '✓ Saved' if masked.DHAN_ACCESS_TOKEN else 'Not set' }}
+          </span>
+        </div>
         <div class="input-wrap">
-          <input type="password" id="DHAN_ACCESS_TOKEN" name="DHAN_ACCESS_TOKEN"
-                 placeholder="{{ masked.DHAN_ACCESS_TOKEN or 'Enter your Dhan access token' }}">
-          <button type="button" class="toggle-eye" onclick="toggleVis('DHAN_ACCESS_TOKEN', this)">👁</button>
+          <input type="password" id="f-dhan-token" name="DHAN_ACCESS_TOKEN"
+                 placeholder="{{ masked.DHAN_ACCESS_TOKEN or 'Paste your Dhan access token' }}">
+          <button type="button" class="toggle-eye" onclick="toggleVis('f-dhan-token',this)">👁</button>
         </div>
         <div class="hint">Generate from Dhan → My Profile → API Access</div>
       </div>
     </div>
 
+    <!-- Alpaca -->
     <div class="section">
       <div class="section-title">🇺🇸 Alpaca — US Bot</div>
 
       <div class="field">
-        <label for="ALPACA_API_KEY">API Key</label>
+        <div class="field-label-row">
+          <label>API Key</label>
+          <span class="{{ 'badge-saved' if masked.ALPACA_API_KEY else 'badge-not-set' }}">
+            {{ '✓ Saved' if masked.ALPACA_API_KEY else 'Not set' }}
+          </span>
+        </div>
         <div class="input-wrap">
-          <input type="password" id="ALPACA_API_KEY" name="ALPACA_API_KEY"
-                 placeholder="{{ masked.ALPACA_API_KEY or 'Enter your Alpaca API key' }}">
-          <button type="button" class="toggle-eye" onclick="toggleVis('ALPACA_API_KEY', this)">👁</button>
+          <input type="password" id="f-alp-key" name="ALPACA_API_KEY"
+                 placeholder="{{ masked.ALPACA_API_KEY or 'Paste your Alpaca API key' }}">
+          <button type="button" class="toggle-eye" onclick="toggleVis('f-alp-key',this)">👁</button>
         </div>
       </div>
 
       <div class="field">
-        <label for="ALPACA_SECRET_KEY">Secret Key</label>
-        <div class="input-wrap">
-          <input type="password" id="ALPACA_SECRET_KEY" name="ALPACA_SECRET_KEY"
-                 placeholder="{{ masked.ALPACA_SECRET_KEY or 'Enter your Alpaca secret key' }}">
-          <button type="button" class="toggle-eye" onclick="toggleVis('ALPACA_SECRET_KEY', this)">👁</button>
+        <div class="field-label-row">
+          <label>Secret Key</label>
+          <span class="{{ 'badge-saved' if masked.ALPACA_SECRET_KEY else 'badge-not-set' }}">
+            {{ '✓ Saved' if masked.ALPACA_SECRET_KEY else 'Not set' }}
+          </span>
         </div>
-        <div class="hint">Generate from Alpaca → Account → Manage Accounts → API Keys</div>
+        <div class="input-wrap">
+          <input type="password" id="f-alp-secret" name="ALPACA_SECRET_KEY"
+                 placeholder="{{ masked.ALPACA_SECRET_KEY or 'Paste your Alpaca secret key' }}">
+          <button type="button" class="toggle-eye" onclick="toggleVis('f-alp-secret',this)">👁</button>
+        </div>
+        <div class="hint">Account → Manage Accounts → API Keys on Alpaca dashboard</div>
       </div>
     </div>
 
+    <!-- Telegram -->
     <div class="section">
       <div class="section-title">📱 Telegram — Notifications</div>
 
       <div class="field">
-        <label for="TELEGRAM_BOT_TOKEN">Bot Token</label>
+        <div class="field-label-row">
+          <label>Bot Token</label>
+          <span class="{{ 'badge-saved' if masked.TELEGRAM_BOT_TOKEN else 'badge-not-set' }}">
+            {{ '✓ Saved' if masked.TELEGRAM_BOT_TOKEN else 'Not set' }}
+          </span>
+        </div>
         <div class="input-wrap">
-          <input type="password" id="TELEGRAM_BOT_TOKEN" name="TELEGRAM_BOT_TOKEN"
-                 placeholder="{{ masked.TELEGRAM_BOT_TOKEN or 'Enter your Telegram bot token' }}">
-          <button type="button" class="toggle-eye" onclick="toggleVis('TELEGRAM_BOT_TOKEN', this)">👁</button>
+          <input type="password" id="f-tg-token" name="TELEGRAM_BOT_TOKEN"
+                 placeholder="{{ masked.TELEGRAM_BOT_TOKEN or 'Paste your Telegram bot token' }}">
+          <button type="button" class="toggle-eye" onclick="toggleVis('f-tg-token',this)">👁</button>
         </div>
       </div>
 
       <div class="field">
-        <label for="TELEGRAM_CHAT_ID">Chat ID</label>
+        <div class="field-label-row"><label>Chat ID</label></div>
         <div class="input-wrap">
-          <input type="text" id="TELEGRAM_CHAT_ID" name="TELEGRAM_CHAT_ID"
+          <input type="text" name="TELEGRAM_CHAT_ID"
                  placeholder="{{ masked.TELEGRAM_CHAT_ID or 'Enter your Telegram chat ID' }}">
         </div>
       </div>
     </div>
 
+    <!-- Perplexity -->
     <div class="section">
       <div class="section-title">🔍 Perplexity — News & Market Intel</div>
 
       <div class="field">
-        <label for="PERPLEXITY_API_KEY">API Key</label>
-        <div class="input-wrap">
-          <input type="password" id="PERPLEXITY_API_KEY" name="PERPLEXITY_API_KEY"
-                 placeholder="{{ masked.PERPLEXITY_API_KEY or 'Enter your Perplexity API key' }}">
-          <button type="button" class="toggle-eye" onclick="toggleVis('PERPLEXITY_API_KEY', this)">👁</button>
+        <div class="field-label-row">
+          <label>API Key</label>
+          <span class="{{ 'badge-saved' if masked.PERPLEXITY_API_KEY else 'badge-not-set' }}">
+            {{ '✓ Saved' if masked.PERPLEXITY_API_KEY else 'Not set' }}
+          </span>
         </div>
-        <div class="hint">Used for premarket news and stock research. Get from perplexity.ai → API</div>
+        <div class="input-wrap">
+          <input type="password" id="f-perp-key" name="PERPLEXITY_API_KEY"
+                 placeholder="{{ masked.PERPLEXITY_API_KEY or 'Paste your Perplexity API key' }}">
+          <button type="button" class="toggle-eye" onclick="toggleVis('f-perp-key',this)">👁</button>
+        </div>
+        <div class="hint">Used for premarket news. Get from perplexity.ai → API</div>
       </div>
-    </div>
-
-    <div class="section">
-      <div class="section-title">🤖 Claude Code — AI Analysis</div>
-
-      <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
-        <span class="status-dot {{ 'green' if claude.connected else 'red' }}"></span>
-        <span style="font-size:13px;">
-          {% if claude.connected %}
-            Connected{% if claude.account %} as <strong>{{ claude.account }}</strong>{% endif %}
-          {% elif claude.expired %}
-            Session expired — please re-login
-          {% else %}
-            Not logged in
-          {% endif %}
-        </span>
-      </div>
-
-      {% if not claude.connected %}
-      <div class="hint" style="background:#1c2030; border:1px solid #30363d; border-radius:8px; padding:10px 14px; font-size:12px; color:#b0bec5; line-height:1.6;">
-        Claude Code uses browser-based login, not an API key.<br>
-        Run this in your terminal to connect:<br>
-        <code style="color:#58a6ff; font-family:monospace;">claude login</code>
-      </div>
-      {% else %}
-      <div class="hint" style="color:#22c55e;">
-        Claude Code is connected. No action needed — the bot uses your existing login.
-      </div>
-      {% endif %}
     </div>
 
     <button type="submit" class="save-btn">Save Settings</button>
-
   </form>
+
+  <!-- Claude Code — outside form, OAuth flow -->
+  <div class="section" style="margin-top:16px;">
+    <div class="section-title">🤖 Claude Code — AI Analysis</div>
+
+    <div class="claude-row">
+      <div class="claude-left">
+        <span class="status-dot {{ 'green' if claude.connected else 'red' }}" id="claude-dot"></span>
+        <span id="claude-label">
+          {% if claude.connected %}
+            Connected{% if claude.account %} as <strong>{{ claude.account }}</strong>{% endif %}
+          {% elif claude.expired %}
+            Session expired
+          {% else %}
+            Not connected
+          {% endif %}
+        </span>
+      </div>
+      <div style="display:flex;gap:8px;">
+        {% if not claude.connected %}
+        <button class="btn-connect" id="btn-connect" onclick="claudeLogin()">Connect</button>
+        {% else %}
+        <button class="btn-disconnect" onclick="claudeLogout()">Disconnect</button>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Step 2: shown after clicking Connect -->
+    <div id="oauth-step" style="display:none; margin-top:14px;">
+      <div class="oauth-instruction">
+        1. A Claude login page has opened in your browser.<br>
+        2. Log in and approve access.<br>
+        3. Copy the code shown on the final page and paste it below.
+      </div>
+      <div class="input-wrap" style="margin-top:10px;">
+        <input type="text" id="oauth-code" placeholder="Paste the code here…" autocomplete="off">
+      </div>
+      <button class="btn-connect" style="margin-top:8px;width:100%;" onclick="claudeExchange()">Submit Code</button>
+      <div id="oauth-error" style="color:#ef4444;font-size:12px;margin-top:6px;display:none;"></div>
+    </div>
+
+    {% if claude.connected %}
+    <div style="font-size:12px;color:#8b949e;margin-top:8px;">
+      The dashboard uses its own login — disconnecting here won't affect your terminal.
+    </div>
+    {% endif %}
+  </div>
+
 </main>
 
 <script>
 function toggleVis(id, btn) {
   const inp = document.getElementById(id);
-  if (inp.type === 'password') {
-    inp.type = 'text';
-    btn.textContent = '🙈';
-  } else {
-    inp.type = 'password';
-    btn.textContent = '👁';
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+  btn.textContent = inp.type === 'password' ? '👁' : '🙈';
+}
+
+async function claudeLogin() {
+  const btn = document.getElementById('btn-connect');
+  btn.disabled = true;
+  btn.textContent = 'Opening…';
+  try {
+    const res  = await fetch('/api/claude/oauth/start', { method: 'POST' });
+    const data = await res.json();
+    window.open(data.url, '_blank');
+    document.getElementById('oauth-step').style.display = 'block';
+    btn.textContent = 'Connect';
+    btn.disabled = false;
+  } catch(e) {
+    btn.textContent = 'Connect';
+    btn.disabled = false;
+    alert('Failed to start login: ' + e);
   }
+}
+
+async function claudeExchange() {
+  const code = document.getElementById('oauth-code').value.trim();
+  const errEl = document.getElementById('oauth-error');
+  errEl.style.display = 'none';
+  if (!code) { errEl.textContent = 'Please paste the code first.'; errEl.style.display = 'block'; return; }
+
+  try {
+    const res  = await fetch('/api/claude/oauth/exchange', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code }),
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) {
+      errEl.textContent = data.error || 'Exchange failed.';
+      errEl.style.display = 'block';
+      return;
+    }
+    // Success — reload to show connected state
+    window.location.reload();
+  } catch(e) {
+    errEl.textContent = 'Network error: ' + e;
+    errEl.style.display = 'block';
+  }
+}
+
+async function claudeLogout() {
+  if (!confirm('Disconnect? This only removes the dashboard login — your terminal session is unaffected.')) return;
+  await fetch('/api/claude/logout', { method: 'POST' });
+  window.location.reload();
 }
 </script>
 </body>
