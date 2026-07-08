@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Settings — Trading Bot</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0d1117;
+    color: #e6edf3;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+  }
+
+  nav {
+    background: #161b22;
+    border-bottom: 1px solid #30363d;
+    padding: 0 24px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  nav .logo { font-size: 16px; font-weight: 600; }
+  nav a {
+    color: #8b949e; text-decoration: none; font-size: 13px;
+    padding: 6px 12px; border-radius: 6px; transition: background 0.15s;
+  }
+  nav a:hover { background: #21262d; color: #e6edf3; }
+
+  main { max-width: 600px; margin: 0 auto; padding: 32px 20px; }
+
+  .page-title { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+  .page-sub   { color: #8b949e; font-size: 13px; margin-bottom: 28px; }
+
+  .saved-banner {
+    background: #0d3321; border: 1px solid #22c55e;
+    color: #22c55e; border-radius: 8px; padding: 10px 16px;
+    margin-bottom: 20px; font-size: 13px;
+  }
+
+  .section {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 16px;
+  }
+  .section-title {
+    font-size: 13px; font-weight: 600; color: #8b949e;
+    text-transform: uppercase; letter-spacing: .05em; margin-bottom: 16px;
+  }
+
+  .field { margin-bottom: 14px; }
+  .field:last-child { margin-bottom: 0; }
+
+  label {
+    display: block; font-size: 12px; font-weight: 600;
+    color: #8b949e; margin-bottom: 5px; letter-spacing: .02em;
+  }
+
+  .input-wrap { position: relative; }
+
+  input[type="text"], input[type="password"] {
+    width: 100%; background: #0d1117; border: 1px solid #30363d;
+    border-radius: 8px; padding: 9px 40px 9px 12px;
+    color: #e6edf3; font-size: 13px; outline: none;
+    transition: border-color 0.15s;
+    font-family: "Courier New", monospace;
+  }
+  input:focus { border-color: #58a6ff; }
+  input::placeholder { color: #484f58; }
+
+  .toggle-eye {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; cursor: pointer; color: #8b949e;
+    font-size: 14px; padding: 2px;
+  }
+  .toggle-eye:hover { color: #e6edf3; }
+
+  .hint { font-size: 11px; color: #484f58; margin-top: 4px; }
+
+  .save-btn {
+    width: 100%; padding: 11px; background: #238636; color: #fff;
+    border: none; border-radius: 8px; font-size: 14px; font-weight: 600;
+    cursor: pointer; margin-top: 8px; transition: opacity 0.15s;
+  }
+  .save-btn:hover { opacity: 0.85; }
+
+  .warning {
+    background: #2d1e00; border: 1px solid #856404;
+    color: #d4a017; border-radius: 8px; padding: 10px 16px;
+    font-size: 12px; margin-bottom: 20px;
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="logo">⚡ Trading Bot</span>
+  <a href="/">← Dashboard</a>
+</nav>
+
+<main>
+  <div class="page-title">Settings</div>
+  <div class="page-sub">API keys are saved to your local .env file — never shared or uploaded.</div>
+
+  {% if saved %}
+  <div class="saved-banner">✓ Settings saved successfully.</div>
+  {% endif %}
+
+  <div class="warning">
+    ⚠ Leave a field blank to keep the existing value. Filling a field will overwrite it.
+  </div>
+
+  <form method="POST" action="/settings">
+
+    <div class="section">
+      <div class="section-title">🇮🇳 Dhan — India Bot</div>
+
+      <div class="field">
+        <label for="DHAN_CLIENT_ID">Client ID</label>
+        <div class="input-wrap">
+          <input type="text" id="DHAN_CLIENT_ID" name="DHAN_CLIENT_ID"
+                 placeholder="{{ masked.DHAN_CLIENT_ID or 'Enter your Dhan client ID' }}">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="DHAN_ACCESS_TOKEN">Access Token</label>
+        <div class="input-wrap">
+          <input type="password" id="DHAN_ACCESS_TOKEN" name="DHAN_ACCESS_TOKEN"
+                 placeholder="{{ masked.DHAN_ACCESS_TOKEN or 'Enter your Dhan access token' }}">
+          <button type="button" class="toggle-eye" onclick="toggleVis('DHAN_ACCESS_TOKEN', this)">👁</button>
+        </div>
+        <div class="hint">Generate from Dhan → My Profile → API Access</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">🇺🇸 Alpaca — US Bot</div>
+
+      <div class="field">
+        <label for="ALPACA_API_KEY">API Key</label>
+        <div class="input-wrap">
+          <input type="password" id="ALPACA_API_KEY" name="ALPACA_API_KEY"
+                 placeholder="{{ masked.ALPACA_API_KEY or 'Enter your Alpaca API key' }}">
+          <button type="button" class="toggle-eye" onclick="toggleVis('ALPACA_API_KEY', this)">👁</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="ALPACA_SECRET_KEY">Secret Key</label>
+        <div class="input-wrap">
+          <input type="password" id="ALPACA_SECRET_KEY" name="ALPACA_SECRET_KEY"
+                 placeholder="{{ masked.ALPACA_SECRET_KEY or 'Enter your Alpaca secret key' }}">
+          <button type="button" class="toggle-eye" onclick="toggleVis('ALPACA_SECRET_KEY', this)">👁</button>
+        </div>
+        <div class="hint">Generate from Alpaca → Account → Manage Accounts → API Keys</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">📱 Telegram — Notifications</div>
+
+      <div class="field">
+        <label for="TELEGRAM_BOT_TOKEN">Bot Token</label>
+        <div class="input-wrap">
+          <input type="password" id="TELEGRAM_BOT_TOKEN" name="TELEGRAM_BOT_TOKEN"
+                 placeholder="{{ masked.TELEGRAM_BOT_TOKEN or 'Enter your Telegram bot token' }}">
+          <button type="button" class="toggle-eye" onclick="toggleVis('TELEGRAM_BOT_TOKEN', this)">👁</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="TELEGRAM_CHAT_ID">Chat ID</label>
+        <div class="input-wrap">
+          <input type="text" id="TELEGRAM_CHAT_ID" name="TELEGRAM_CHAT_ID"
+                 placeholder="{{ masked.TELEGRAM_CHAT_ID or 'Enter your Telegram chat ID' }}">
+        </div>
+      </div>
+    </div>
+
+    <button type="submit" class="save-btn">Save Settings</button>
+
+  </form>
+</main>
+
+<script>
+function toggleVis(id, btn) {
+  const inp = document.getElementById(id);
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    btn.textContent = '🙈';
+  } else {
+    inp.type = 'password';
+    btn.textContent = '👁';
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trading Bot Dashboard</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0d1117;
+    color: #e6edf3;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+  }
+
+  nav {
+    background: #161b22;
+    border-bottom: 1px solid #30363d;
+    padding: 0 24px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  nav .logo { font-size: 16px; font-weight: 600; }
+  nav a {
+    color: #8b949e;
+    text-decoration: none;
+    font-size: 13px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    transition: background 0.15s;
+  }
+  nav a:hover { background: #21262d; color: #e6edf3; }
+
+  main { max-width: 1100px; margin: 0 auto; padding: 28px 20px; }
+
+  h2 { font-size: 13px; color: #8b949e; font-weight: 500;
+       letter-spacing: .05em; text-transform: uppercase; margin-bottom: 14px; }
+
+  /* Bot cards */
+  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 32px; }
+
+  @media (max-width: 640px) { .cards { grid-template-columns: 1fr; } }
+
+  .card {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 12px;
+    padding: 20px 24px;
+  }
+  .card.india  { border-top: 3px solid #f97316; }
+  .card.us     { border-top: 3px solid #3b82f6; }
+
+  .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+  .card-title  { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 99px;
+  }
+  .badge.running { background: #0d3321; color: #22c55e; }
+  .badge.stopped { background: #2d1515; color: #ef4444; }
+  .badge::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+  .pnl {
+    font-size: 32px; font-weight: 700; margin-bottom: 4px;
+    letter-spacing: -0.5px;
+  }
+  .pnl.pos { color: #22c55e; }
+  .pnl.neg { color: #ef4444; }
+  .pnl.zero { color: #8b949e; }
+
+  .meta { color: #8b949e; font-size: 12px; margin-bottom: 16px; }
+  .meta span { margin-right: 12px; }
+  .meta .win  { color: #22c55e; }
+  .meta .loss { color: #ef4444; }
+
+  .open-positions { margin-bottom: 16px; }
+  .open-positions .label { font-size: 11px; color: #8b949e; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .05em; }
+  .pos-row { font-size: 12px; color: #b0bec5; background: #0d1117; border-radius: 6px; padding: 5px 10px; margin-bottom: 4px; }
+
+  .btn {
+    width: 100%; padding: 9px; border-radius: 8px; border: none;
+    font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity 0.15s;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn.start { background: #238636; color: #fff; }
+  .btn.stop  { background: #b91c1c; color: #fff; }
+
+  /* Trades table */
+  .trades-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    text-align: left; padding: 8px 12px; font-size: 11px;
+    color: #8b949e; font-weight: 600; letter-spacing: .05em;
+    text-transform: uppercase; border-bottom: 1px solid #30363d;
+  }
+  tbody tr { border-bottom: 1px solid #21262d; }
+  tbody tr:hover { background: #161b22; }
+  tbody td { padding: 9px 12px; font-size: 13px; }
+
+  .tag {
+    display: inline-block; font-size: 10px; font-weight: 700;
+    padding: 2px 6px; border-radius: 4px; letter-spacing: .03em;
+  }
+  .tag.buy    { background: #0d3321; color: #22c55e; }
+  .tag.sell   { background: #2d1515; color: #ef4444; }
+  .tag.target { background: #0d2030; color: #38bdf8; }
+  .tag.sl     { background: #2d1515; color: #f97316; }
+  .tag.open   { background: #1c2030; color: #a78bfa; }
+  .pnl-cell.pos { color: #22c55e; font-weight: 600; }
+  .pnl-cell.neg { color: #ef4444; font-weight: 600; }
+  .pnl-cell.zero { color: #8b949e; }
+
+  .refresh-note { color: #484f58; font-size: 11px; text-align: right; margin-top: 8px; }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="logo">⚡ Trading Bot</span>
+  <a href="/settings">⚙ Settings</a>
+</nav>
+
+<main>
+
+  <h2>Bot Status</h2>
+  <div class="cards">
+
+    {% for account, s in stats.items() %}
+    <div class="card {{ 'india' if account == 'tester' else 'us' }}" id="card-{{ account }}">
+      <div class="card-header">
+        <span class="card-title">{{ s.flag }} {{ s.label }}</span>
+        <span class="badge {{ 'running' if s.running else 'stopped' }}" id="badge-{{ account }}">
+          {{ 'Running' if s.running else 'Stopped' }}
+        </span>
+      </div>
+
+      <div class="pnl {{ 'pos' if s.pnl > 0 else ('neg' if s.pnl < 0 else 'zero') }}" id="pnl-{{ account }}">
+        {{ s.currency }}{{ '{:+.2f}'.format(s.pnl) if s.pnl != 0 else '0.00' }}
+      </div>
+      <div class="meta">
+        <span id="trades-{{ account }}">{{ s.trades }} trade{{ 's' if s.trades != 1 else '' }} today</span>
+        <span class="win" id="wins-{{ account }}">{{ s.wins }}W</span>
+        <span class="loss" id="losses-{{ account }}">{{ s.losses }}L</span>
+      </div>
+
+      {% if s.open %}
+      <div class="open-positions">
+        <div class="label">Open positions</div>
+        {% for p in s.open %}
+        <div class="pos-row">{{ p.symbol }} · {{ p.side }} × {{ p.qty }} @ {{ s.currency }}{{ p.entry }}</div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="meta" style="margin-bottom:16px" id="open-{{ account }}">No open positions</div>
+      {% endif %}
+
+      <button
+        class="btn {{ 'stop' if s.running else 'start' }}"
+        id="btn-{{ account }}"
+        onclick="toggleBot('{{ account }}', {{ 'true' if s.running else 'false' }})">
+        {{ '■ Stop Bot' if s.running else '▶ Start Bot' }}
+      </button>
+    </div>
+    {% endfor %}
+
+  </div>
+
+  <h2>Recent Trades</h2>
+  <div class="trades-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Market</th>
+          <th>Symbol</th>
+          <th>Side</th>
+          <th>Qty</th>
+          <th>Entry</th>
+          <th>Exit</th>
+          <th>PnL</th>
+          <th>Result</th>
+        </tr>
+      </thead>
+      <tbody id="trades-table">
+        {% for t in trades %}
+        <tr>
+          <td style="color:#8b949e; font-size:12px;">{{ t.ts }}</td>
+          <td>{{ t.market }}</td>
+          <td><strong>{{ t.symbol }}</strong></td>
+          <td><span class="tag {{ 'buy' if t.side == 'BUY' else 'sell' }}">{{ t.side }}</span></td>
+          <td>{{ t.qty }}</td>
+          <td>{{ t.currency }}{{ t.entry }}</td>
+          <td>{{ t.currency }}{{ t.exit if t.exit else '—' }}</td>
+          <td class="pnl-cell {{ 'pos' if t.pnl and t.pnl > 0 else ('neg' if t.pnl and t.pnl < 0 else 'zero') }}">
+            {% if t.pnl is not none %}
+              {{ t.currency }}{{ '{:+.2f}'.format(t.pnl) }}
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            {% if t.reason == 'TARGET' %}<span class="tag target">TARGET</span>
+            {% elif t.reason == 'STOPLOSS' %}<span class="tag sl">SL</span>
+            {% elif t.status == 'open' %}<span class="tag open">OPEN</span>
+            {% else %}<span style="color:#8b949e; font-size:12px;">{{ t.reason }}</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="9" style="text-align:center; color:#8b949e; padding:24px;">No trades yet</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="refresh-note" id="last-updated">Auto-refreshes every 10 seconds</div>
+
+</main>
+
+<script>
+async function toggleBot(account, isRunning) {
+  const btn = document.getElementById('btn-' + account);
+  btn.disabled = true;
+  btn.textContent = 'Please wait...';
+
+  const action = isRunning ? 'stop' : 'start';
+  try {
+    await fetch('/api/' + action + '/' + account, { method: 'POST' });
+    await refreshStatus();
+  } catch(e) {
+    btn.disabled = false;
+  }
+}
+
+async function refreshStatus() {
+  try {
+    const res = await fetch('/api/status');
+    const data = await res.json();
+
+    for (const [account, s] of Object.entries(data)) {
+      const badge  = document.getElementById('badge-'  + account);
+      const pnl    = document.getElementById('pnl-'    + account);
+      const trades = document.getElementById('trades-' + account);
+      const wins   = document.getElementById('wins-'   + account);
+      const losses = document.getElementById('losses-' + account);
+      const btn    = document.getElementById('btn-'    + account);
+
+      if (!badge) continue;
+
+      badge.className = 'badge ' + (s.running ? 'running' : 'stopped');
+      badge.textContent = s.running ? 'Running' : 'Stopped';
+
+      const pnlVal = s.pnl;
+      pnl.className = 'pnl ' + (pnlVal > 0 ? 'pos' : pnlVal < 0 ? 'neg' : 'zero');
+      const sign = pnlVal > 0 ? '+' : '';
+      pnl.textContent = s.currency + sign + pnlVal.toFixed(2);
+
+      trades.textContent = s.trades + ' trade' + (s.trades !== 1 ? 's' : '') + ' today';
+      wins.textContent   = s.wins   + 'W';
+      losses.textContent = s.losses + 'L';
+
+      btn.className = 'btn ' + (s.running ? 'stop' : 'start');
+      btn.textContent = s.running ? '■ Stop Bot' : '▶ Start Bot';
+      btn.disabled = false;
+      btn.onclick = function() { toggleBot(account, s.running); };
+    }
+
+    document.getElementById('last-updated').textContent =
+      'Last updated: ' + new Date().toLocaleTimeString();
+
+  } catch(e) {
+    console.error('Status refresh failed:', e);
+  }
+}
+
+setInterval(refreshStatus, 10000);
+</script>
+</body>
+</html>
