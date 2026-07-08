@@ -1,55 +1,98 @@
-# Trading Bot
+# AI Trading Bot
 
-AI-augmented intraday trading bot for Indian markets (Dhan broker). Claude Code orchestrates 7 specialist subagents for research, review, and journaling. A deterministic Python executor places trades.
+Intraday trading bot for **India (Dhan/NSE)** and **US (Alpaca/NYSE)** markets.
+ML model decides trades. VWAP/ORB are entry timing only.
+Managed via a web dashboard — no terminal needed after setup.
 
-## Quick start
+---
+
+## Requirements
+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running
+- API keys (see step 2)
+
+---
+
+## Setup
+
+### 1. Clone the repo
 
 ```bash
-# 1. Install
-pip install -r requirements.txt
+git clone https://github.com/atharvab1902/ai-trading-bot.git
+cd ai-trading-bot
+```
 
-# 2. Configure
+### 2. Create your `.env` file
+
+```bash
 cp .env.example .env
-# edit .env with Dhan API keys, Telegram bot token
-cp config/accounts/tester.yaml.example config/accounts/tester.yaml
-# edit with your watchlist, capital, strategy
-
-# 3. Init database
-python scripts/init_db.py
-
-# 4. Paper trade — run executor
-python -m executor.executor --account tester
-
-# 5. Run Claude routines (scheduled or manual)
-claude -p "run premarket for account=tester"
-claude -p "run postmarket for account=tester"
-claude -p "run weekly for account=tester"
 ```
 
-## Architecture
+Open `.env` and fill in your keys:
+
+| Key | Where to get it |
+|---|---|
+| `DHAN_CLIENT_ID` + `DHAN_ACCESS_TOKEN` | [dhanhq.co](https://dhanhq.co) → My Profile → API |
+| `ALPACA_API_KEY` + `ALPACA_API_SECRET` | [alpaca.markets](https://alpaca.markets) → Paper Trading → API Keys |
+| `TELEGRAM_BOT_TOKEN` | Telegram → @BotFather → /newbot |
+| `TELEGRAM_CHAT_ID` | Telegram → @userinfobot |
+| `PERPLEXITY_API_KEY` | [perplexity.ai](https://www.perplexity.ai/settings/api) |
+
+> Leave any key blank if you don't have it — the bot runs without it (Dhan/Alpaca required for the respective bot, others optional).
+
+### 3. Start
+
+```bash
+docker compose up -d
+```
+
+### 4. Open the dashboard
+
+Go to **http://localhost:5000** in your browser.
+
+From there you can:
+- Add / update API keys (Settings page)
+- Start / stop the India or US bot
+- Connect Claude Code via browser OAuth (Settings → Claude Code)
+- View live PnL and recent trades
+
+---
+
+## Stopping
+
+```bash
+docker compose down
+```
+
+---
+
+## Running tests
+
+```bash
+pip install pytest
+python -m pytest tests/ -v
+```
+
+Docker daemon tests are skipped automatically if Docker is not running.
+
+---
+
+## Project structure
 
 ```
-Claude Code (scheduled)         Python executor (9:15-15:30 IST)
-       |                                  |
-       v                                  v
-   edits config.yaml  ------>  reads config, places trades via Dhan API
-       |                                  |
-       v                                  v
-   7 subagents                     logs -> SQLite + Telegram
+config/accounts/    — per-account settings (watchlist, capital, strategy)
+executor/           — trade execution engine
+ml/                 — ML model training and inference
+scanner/            — premarket stock scanner
+dashboard.py        — web dashboard (Flask)
+scheduler.py        — market session scheduler
+data/trades.db      — SQLite trade log (auto-created)
 ```
 
-## Phases
+---
 
-1. **Dev (laptop)** — build, unit test, mock broker
-2. **Paper (laptop, 4-8 weeks)** — Dhan sandbox or `mode: paper`
-3. **Live tiny (₹5-10k)** — real capital, hard daily loss limit
-4. **VPS migration** — only after 3 profitable months
+## Safety rules
 
-## Safety
-
-- Daily loss limit: 2% (auto-halt)
-- Max positions: 1 (initially)
-- AI cannot: place trades directly, move money, change risk limits without PR merge
-- Every trade + decision logged
-
-See `CLAUDE.md` for full operating rules.
+- Daily loss limit: **2%** — bot halts automatically if hit
+- Default mode: **paper trading** — no real money until you set `TRADING_MODE=live`
+- Never set live mode without 4+ weeks of paper trading with positive expectancy
