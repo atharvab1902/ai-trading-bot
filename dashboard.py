@@ -12,6 +12,7 @@ import secrets
 import sqlite3
 import subprocess
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlencode
@@ -20,7 +21,7 @@ import psutil
 import pytz
 import requests as _requests
 from dotenv import dotenv_values
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, Response, jsonify, render_template, request, stream_with_context
 
 REPO_ROOT = Path(__file__).parent
 app = Flask(__name__)
@@ -172,7 +173,7 @@ def account_stats(account: str) -> dict:
             "AND substr(ts,1,10)=? AND pnl<0", (account, today),
         ).fetchone()[0]
         open_rows = con.execute(
-            "SELECT symbol, side, qty, entry_price FROM trades "
+            "SELECT symbol, side, qty, entry_price, stoploss, target FROM trades "
             "WHERE account=? AND status='open'", (account,),
         ).fetchall()
         con.close()
@@ -191,7 +192,12 @@ def account_stats(account: str) -> dict:
         "wins":     wins,
         "losses":   losses,
         "open":     [
-            {"symbol": r[0], "side": r[1], "qty": r[2], "entry": round(r[3], 2)}
+            {
+                "symbol": r[0], "side": r[1], "qty": r[2],
+                "entry":  round(r[3], 2),
+                "sl":     round(r[4], 2) if r[4] else None,
+                "target": round(r[5], 2) if r[5] else None,
+            }
             for r in open_rows
         ],
     }
@@ -238,6 +244,19 @@ def index():
 @app.route("/api/status")
 def api_status():
     return jsonify({acc: account_stats(acc) for acc in ACCOUNTS})
+
+
+@app.route("/api/live-prices/<account>")
+def api_live_prices(account):
+    if account not in ACCOUNTS:
+        return jsonify({}), 400
+    qfile = REPO_ROOT / "data" / f"live_quotes_{account}.json"
+    if not qfile.exists():
+        return jsonify({})
+    try:
+        return jsonify(json.loads(qfile.read_text()))
+    except Exception:
+        return jsonify({})
 
 
 @app.route("/api/start/<account>", methods=["POST"])
@@ -356,6 +375,67 @@ def settings():
 
     return render_template("settings.html", masked=masked, saved=saved,
                            claude=claude_connection())
+
+
+LOG_DIR = REPO_ROOT / "logs"
+
+
+@app.route("/logs")
+def logs_page():
+    log_files = []
+    if LOG_DIR.exists():
+        log_files = [
+            f.name for f in sorted(
+                (f for f in LOG_DIR.iterdir() if f.suffix == ".log"),
+                key=lambda f: f.stat().st_mtime,
+                reverse=True,
+            )
+        ]
+    return render_template("logs.html", log_files=log_files)
+
+
+@app.route("/api/logs/stream")
+def api_logs_stream():
+    filename = request.args.get("file", "")
+    if not filename or ".." in filename or "/" in filename or "\\" in filename:
+        return "Bad request", 400
+    log_path = LOG_DIR / filename
+    if not log_path.exists() or not log_path.is_file():
+        return "File not found", 404
+
+    def generate():
+        try:
+            with open(log_path, "r", encoding="utf-8", errors="replace") as f:
+                lines = f.readlines()
+            for line in (lines[-200:] if len(lines) > 200 else lines):
+                yield f"data: {line.rstrip()}\n\n"
+        except Exception as e:
+            yield f"data: [Error: {e}]\n\n"
+            return
+
+        pos = log_path.stat().st_size
+        while True:
+            time.sleep(1.5)
+            try:
+                cur = log_path.stat().st_size
+                if cur > pos:
+                    with open(log_path, "r", encoding="utf-8", errors="replace") as f:
+                        f.seek(pos)
+                        chunk = f.read()
+                    pos = cur
+                    for line in chunk.splitlines():
+                        if line.strip():
+                            yield f"data: {line}\n\n"
+                else:
+                    yield ": keepalive\n\n"
+            except Exception:
+                break
+
+    return Response(
+        stream_with_context(generate()),
+        mimetype="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 if __name__ == "__main__":

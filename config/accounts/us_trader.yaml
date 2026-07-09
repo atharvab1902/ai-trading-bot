@@ -42,8 +42,6 @@ telegram_chat_id_env: TELEGRAM_CHAT_ID
 watchlist:
 - AAPL
 - AMD
-- MSFT
-- NVDA
 - TSLA
 - SPY
 - QQQ

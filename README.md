@@ -1,8 +1,27 @@
 # AI Trading Bot
 
-Intraday trading bot for **India (Dhan/NSE)** and **US (Alpaca/NYSE)** markets.
-ML model decides trades. VWAP/ORB are entry timing only.
-Managed via a web dashboard — no terminal needed after setup.
+---
+
+## What is this?
+
+This is an autonomous intraday trading bot that trades stocks on the **Indian market (NSE via Dhan)** and the **US market (NYSE/NASDAQ via Alpaca)** simultaneously.
+
+You set it up once, start it from a browser dashboard, and it runs on its own — scanning stocks before market open, entering trades during the session, managing stop losses and targets, and shutting down cleanly at close.
+
+**How it makes decisions:**
+- A machine learning model scores every signal before a trade is placed. It learns from your own trade history over time and gets better the longer it runs.
+- VWAP and ORB strategies identify entry timing — when a stock deviates from its intraday average with a recovery signal, the bot evaluates whether to trade it.
+- A regime detector reads the overall market mood (trending, choppy, volatile) and adjusts position sizes accordingly.
+- Every night after market close, Claude analyses the day's trades and proposes strategy improvements. Every Sunday, a three-agent pipeline (researcher → critic → risk officer) reviews the week and auto-applies safe parameter changes.
+
+**What you see on the dashboard:**
+- Live PnL for each market, updated every few seconds
+- Open positions with entry price, current price, stop loss, target, and a progress bar
+- Recent trade history
+- Live log viewer — same logs you'd see in a terminal
+- Start/stop controls for each bot
+
+**Paper trading by default.** No real money is used until you explicitly switch to live mode after verifying results.
 
 ---
 

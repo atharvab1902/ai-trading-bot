@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Logs — Trading Bot</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #0d1117;
+    color: #e6edf3;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+  }
+
+  nav {
+    background: #161b22;
+    border-bottom: 1px solid #30363d;
+    padding: 0 24px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  nav .logo { font-size: 16px; font-weight: 600; }
+  nav a {
+    color: #8b949e;
+    text-decoration: none;
+    font-size: 13px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    transition: background 0.15s;
+  }
+  nav a:hover { background: #21262d; color: #e6edf3; }
+
+  main { max-width: 1200px; margin: 0 auto; padding: 28px 20px; }
+
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  select {
+    background: #161b22;
+    border: 1px solid #30363d;
+    color: #e6edf3;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 13px;
+    cursor: pointer;
+    min-width: 280px;
+  }
+  select:focus { outline: none; border-color: #58a6ff; }
+
+  .btn {
+    background: #21262d;
+    border: 1px solid #30363d;
+    color: #e6edf3;
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .btn:hover { background: #30363d; }
+  .btn.active { background: #1f6feb; border-color: #1f6feb; }
+
+  .status {
+    font-size: 12px;
+    color: #8b949e;
+    margin-left: auto;
+  }
+  .dot {
+    display: inline-block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #3d444d;
+    margin-right: 5px;
+    vertical-align: middle;
+  }
+  .dot.live { background: #3fb950; animation: pulse 2s infinite; }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  #log-box {
+    background: #010409;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    padding: 14px 16px;
+    height: calc(100vh - 200px);
+    overflow-y: auto;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 12.5px;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  .log-line { display: block; }
+  .log-line:hover { background: #161b22; }
+
+  /* colour coding */
+  .log-line.warn  { color: #e3b341; }
+  .log-line.error { color: #f85149; }
+  .log-line.info  { color: #e6edf3; }
+  .log-line.debug { color: #6e7681; }
+  .log-line.trade { color: #3fb950; }
+
+  .empty {
+    color: #6e7681;
+    text-align: center;
+    padding: 48px;
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="logo">⚡ Trading Bot</span>
+  <div>
+    <a href="/">← Dashboard</a>
+    <a href="/settings">⚙ Settings</a>
+  </div>
+</nav>
+
+<main>
+  <div class="toolbar">
+    <select id="file-select" onchange="loadFile()">
+      <option value="">— select a log file —</option>
+      {% for f in log_files %}
+      <option value="{{ f }}">{{ f }}</option>
+      {% endfor %}
+    </select>
+
+    <button class="btn" id="autoscroll-btn" onclick="toggleAutoscroll()">Auto-scroll: ON</button>
+
+    <button class="btn" onclick="clearBox()">Clear</button>
+
+    <span class="status">
+      <span class="dot" id="status-dot"></span>
+      <span id="status-text">not connected</span>
+    </span>
+  </div>
+
+  <div id="log-box">
+    <span class="empty">Select a log file above to start streaming.</span>
+  </div>
+</main>
+
+<script>
+  let evtSource = null;
+  let autoscroll = true;
+  const box = document.getElementById("log-box");
+  const dot = document.getElementById("status-dot");
+  const statusText = document.getElementById("status-text");
+
+  function setStatus(state) {
+    if (state === "live") {
+      dot.className = "dot live";
+      statusText.textContent = "live";
+    } else if (state === "connecting") {
+      dot.className = "dot";
+      dot.style.background = "#e3b341";
+      statusText.textContent = "connecting…";
+    } else {
+      dot.className = "dot";
+      dot.style.background = "";
+      statusText.textContent = "disconnected";
+    }
+  }
+
+  function colorClass(line) {
+    const l = line.toLowerCase();
+    if (/error|exception|traceback|critical/.test(l)) return "error";
+    if (/warn/.test(l)) return "warn";
+    if (/trade|buy|sell|filled|placed|exit/.test(l)) return "trade";
+    if (/debug/.test(l)) return "debug";
+    return "info";
+  }
+
+  function appendLine(text) {
+    const wasAtBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+    const span = document.createElement("span");
+    span.className = "log-line " + colorClass(text);
+    span.textContent = text;
+    if (box.querySelector(".empty")) box.innerHTML = "";
+    box.appendChild(span);
+    box.appendChild(document.createTextNode("\n"));
+    if (autoscroll && wasAtBottom) box.scrollTop = box.scrollHeight;
+  }
+
+  function loadFile() {
+    const file = document.getElementById("file-select").value;
+    if (evtSource) { evtSource.close(); evtSource = null; }
+    box.innerHTML = '<span class="empty">Loading…</span>';
+    if (!file) { setStatus("disconnected"); return; }
+
+    setStatus("connecting");
+    evtSource = new EventSource("/api/logs/stream?file=" + encodeURIComponent(file));
+
+    evtSource.onmessage = function(e) {
+      if (e.data.trim()) appendLine(e.data);
+      setStatus("live");
+    };
+
+    evtSource.onerror = function() {
+      setStatus("disconnected");
+      evtSource.close();
+      evtSource = null;
+    };
+  }
+
+  function toggleAutoscroll() {
+    autoscroll = !autoscroll;
+    const btn = document.getElementById("autoscroll-btn");
+    btn.textContent = "Auto-scroll: " + (autoscroll ? "ON" : "OFF");
+    btn.className = autoscroll ? "btn active" : "btn";
+    if (autoscroll) box.scrollTop = box.scrollHeight;
+  }
+
+  function clearBox() {
+    box.innerHTML = '<span class="empty">Cleared. New lines will appear here.</span>';
+  }
+
+  // Auto-load most recent file if list is non-empty
+  window.addEventListener("DOMContentLoaded", function() {
+    const sel = document.getElementById("file-select");
+    if (sel.options.length > 1) {
+      sel.selectedIndex = 1;
+      loadFile();
+    }
+  });
+</script>
+</body>
+</html>

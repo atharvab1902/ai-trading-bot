@@ -79,7 +79,20 @@
 
   .open-positions { margin-bottom: 16px; }
   .open-positions .label { font-size: 11px; color: #8b949e; margin-bottom: 6px; text-transform: uppercase; letter-spacing: .05em; }
-  .pos-row { font-size: 12px; color: #b0bec5; background: #0d1117; border-radius: 6px; padding: 5px 10px; margin-bottom: 4px; }
+
+  .pos-card { background: #0d1117; border-radius: 6px; padding: 8px 10px; margin-bottom: 6px; }
+  .pos-header { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; font-size: 13px; }
+  .pos-header strong { flex: 0 0 auto; }
+  .pnl-live { margin-left: auto; font-weight: 600; font-size: 13px; }
+  .pnl-live.pos { color: #22c55e; }
+  .pnl-live.neg { color: #ef4444; }
+  .pos-levels { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 4px; font-size: 11px; margin-bottom: 5px; }
+  .pos-levels span { display: flex; flex-direction: column; }
+  .pos-levels .lbl { color: #6e7681; font-size: 10px; }
+  .pos-levels .val { color: #e6edf3; font-weight: 500; }
+  .pos-levels .val.cur { font-size: 12px; }
+  .pos-bar { height: 4px; background: #21262d; border-radius: 2px; overflow: hidden; }
+  .pos-fill { height: 100%; background: linear-gradient(90deg, #f97316, #22c55e); border-radius: 2px; transition: width 0.4s; }
 
   .btn {
     width: 100%; padding: 9px; border-radius: 8px; border: none;
@@ -122,6 +135,7 @@
 
 <nav>
   <span class="logo">⚡ Trading Bot</span>
+  <a href="/logs">Logs</a>
   <a href="/settings">⚙ Settings</a>
 </nav>
 
@@ -148,16 +162,32 @@
         <span class="loss" id="losses-{{ account }}">{{ s.losses }}L</span>
       </div>
 
-      {% if s.open %}
-      <div class="open-positions">
+      <div class="open-positions" id="positions-{{ account }}">
+        {% if s.open %}
         <div class="label">Open positions</div>
         {% for p in s.open %}
-        <div class="pos-row">{{ p.symbol }} · {{ p.side }} × {{ p.qty }} @ {{ s.currency }}{{ p.entry }}</div>
+        <div class="pos-card">
+          <div class="pos-header">
+            <strong>{{ p.symbol }}</strong>
+            <span class="tag {{ 'buy' if p.side == 'BUY' else 'sell' }}">{{ p.side }}</span>
+            <span style="color:#8b949e; font-size:12px;">× {{ p.qty }}</span>
+            <span class="pnl-live" id="upnl-{{ account }}-{{ p.symbol }}"></span>
+          </div>
+          <div class="pos-levels">
+            <span><span class="lbl">Entry</span><span class="val">{{ s.currency }}{{ p.entry }}</span></span>
+            <span><span class="lbl">Current</span><span class="val cur" id="cur-{{ account }}-{{ p.symbol }}">—</span></span>
+            <span><span class="lbl">Stop loss</span><span class="val" style="color:#f97316;">{{ s.currency }}{{ p.sl if p.sl else '—' }}</span></span>
+            <span><span class="lbl">Target</span><span class="val" style="color:#38bdf8;">{{ s.currency }}{{ p.target if p.target else '—' }}</span></span>
+          </div>
+          {% if p.sl and p.target %}
+          <div class="pos-bar"><div class="pos-fill" id="bar-{{ account }}-{{ p.symbol }}" style="width:50%"></div></div>
+          {% endif %}
+        </div>
         {% endfor %}
+        {% else %}
+        <div class="meta" style="margin-bottom:16px;">No open positions</div>
+        {% endif %}
       </div>
-      {% else %}
-      <div class="meta" style="margin-bottom:16px" id="open-{{ account }}">No open positions</div>
-      {% endif %}
 
       <button
         class="btn {{ 'stop' if s.running else 'start' }}"
@@ -220,18 +250,65 @@
 </main>
 
 <script>
+// Seeded from server render; updated by refreshStatus every 10s
+const _positions = {};
+const _currencies = {};
+{% for account, s in stats.items() %}
+_positions['{{ account }}'] = {{ s.open | tojson }};
+_currencies['{{ account }}'] = '{{ s.currency }}';
+{% endfor %}
+
 async function toggleBot(account, isRunning) {
   const btn = document.getElementById('btn-' + account);
   btn.disabled = true;
   btn.textContent = 'Please wait...';
-
-  const action = isRunning ? 'stop' : 'start';
   try {
-    await fetch('/api/' + action + '/' + account, { method: 'POST' });
+    await fetch('/api/' + (isRunning ? 'stop' : 'start') + '/' + account, { method: 'POST' });
     await refreshStatus();
-  } catch(e) {
-    btn.disabled = false;
+  } catch(e) { btn.disabled = false; }
+}
+
+function applyPrices(account, prices) {
+  const positions = _positions[account] || [];
+  const cur = _currencies[account] || '';
+  for (const p of positions) {
+    const ltp = prices[p.symbol];
+    const curEl  = document.getElementById('cur-'  + account + '-' + p.symbol);
+    const upnlEl = document.getElementById('upnl-' + account + '-' + p.symbol);
+    const barEl  = document.getElementById('bar-'  + account + '-' + p.symbol);
+    if (!curEl) continue;
+
+    if (ltp == null) { curEl.textContent = '—'; continue; }
+
+    const unreal = p.side === 'BUY' ? (ltp - p.entry) * p.qty : (p.entry - ltp) * p.qty;
+    curEl.textContent = cur + ltp.toFixed(2);
+    curEl.style.color = unreal >= 0 ? '#22c55e' : '#ef4444';
+
+    if (upnlEl) {
+      upnlEl.textContent = (unreal >= 0 ? '+' : '') + cur + unreal.toFixed(2);
+      upnlEl.className = 'pnl-live ' + (unreal >= 0 ? 'pos' : 'neg');
+    }
+
+    if (barEl && p.sl != null && p.target != null) {
+      let pct;
+      if (p.side === 'BUY')  pct = (ltp - p.sl)  / (p.target - p.sl);
+      else                   pct = (p.sl  - ltp)  / (p.sl - p.target);
+      pct = Math.max(0, Math.min(1, pct)) * 100;
+      barEl.style.width = pct.toFixed(1) + '%';
+    }
   }
+}
+
+async function refreshPrices() {
+  const accounts = Object.keys(_positions);
+  await Promise.all(accounts.map(async account => {
+    if (!(_positions[account] || []).length) return;
+    try {
+      const res = await fetch('/api/live-prices/' + account);
+      const prices = await res.json();
+      applyPrices(account, prices);
+    } catch(e) {}
+  }));
 }
 
 async function refreshStatus() {
@@ -241,41 +318,75 @@ async function refreshStatus() {
 
     for (const [account, s] of Object.entries(data)) {
       const badge  = document.getElementById('badge-'  + account);
-      const pnl    = document.getElementById('pnl-'    + account);
+      const pnlEl  = document.getElementById('pnl-'    + account);
       const trades = document.getElementById('trades-' + account);
       const wins   = document.getElementById('wins-'   + account);
       const losses = document.getElementById('losses-' + account);
       const btn    = document.getElementById('btn-'    + account);
-
       if (!badge) continue;
 
       badge.className = 'badge ' + (s.running ? 'running' : 'stopped');
       badge.textContent = s.running ? 'Running' : 'Stopped';
 
       const pnlVal = s.pnl;
-      pnl.className = 'pnl ' + (pnlVal > 0 ? 'pos' : pnlVal < 0 ? 'neg' : 'zero');
-      const sign = pnlVal > 0 ? '+' : '';
-      pnl.textContent = s.currency + sign + pnlVal.toFixed(2);
+      pnlEl.className = 'pnl ' + (pnlVal > 0 ? 'pos' : pnlVal < 0 ? 'neg' : 'zero');
+      pnlEl.textContent = s.currency + (pnlVal > 0 ? '+' : '') + pnlVal.toFixed(2);
 
       trades.textContent = s.trades + ' trade' + (s.trades !== 1 ? 's' : '') + ' today';
-      wins.textContent   = s.wins   + 'W';
+      wins.textContent = s.wins + 'W';
       losses.textContent = s.losses + 'L';
 
       btn.className = 'btn ' + (s.running ? 'stop' : 'start');
       btn.textContent = s.running ? '■ Stop Bot' : '▶ Start Bot';
       btn.disabled = false;
-      btn.onclick = function() { toggleBot(account, s.running); };
+      btn.onclick = () => toggleBot(account, s.running);
+
+      // Rebuild positions section if set changed
+      const prev = JSON.stringify(_positions[account] || []);
+      const next = JSON.stringify(s.open || []);
+      if (prev !== next) {
+        _positions[account] = s.open || [];
+        _currencies[account] = s.currency;
+        renderPositions(account, s);
+      }
     }
-
     document.getElementById('last-updated').textContent =
-      'Last updated: ' + new Date().toLocaleTimeString();
-
-  } catch(e) {
-    console.error('Status refresh failed:', e);
-  }
+      'Positions update every 5s · Last: ' + new Date().toLocaleTimeString();
+  } catch(e) { console.error('Status refresh failed:', e); }
 }
 
+function renderPositions(account, s) {
+  const wrap = document.getElementById('positions-' + account);
+  if (!wrap) return;
+  if (!s.open || !s.open.length) {
+    wrap.innerHTML = '<div class="meta" style="margin-bottom:16px;">No open positions</div>';
+    return;
+  }
+  const cur = s.currency;
+  wrap.innerHTML = '<div class="label">Open positions</div>' + s.open.map(p => `
+    <div class="pos-card">
+      <div class="pos-header">
+        <strong>${p.symbol}</strong>
+        <span class="tag ${p.side === 'BUY' ? 'buy' : 'sell'}">${p.side}</span>
+        <span style="color:#8b949e;font-size:12px;">× ${p.qty}</span>
+        <span class="pnl-live" id="upnl-${account}-${p.symbol}"></span>
+      </div>
+      <div class="pos-levels">
+        <span><span class="lbl">Entry</span><span class="val">${cur}${p.entry}</span></span>
+        <span><span class="lbl">Current</span><span class="val cur" id="cur-${account}-${p.symbol}">—</span></span>
+        <span><span class="lbl">Stop loss</span><span class="val" style="color:#f97316;">${cur}${p.sl ?? '—'}</span></span>
+        <span><span class="lbl">Target</span><span class="val" style="color:#38bdf8;">${cur}${p.target ?? '—'}</span></span>
+      </div>
+      ${p.sl != null && p.target != null ? `<div class="pos-bar"><div class="pos-fill" id="bar-${account}-${p.symbol}" style="width:50%"></div></div>` : ''}
+    </div>`).join('');
+}
+
+// Price refresh every 5s (same cadence as executor loop)
+setInterval(refreshPrices, 5000);
+// Status/PnL refresh every 10s
 setInterval(refreshStatus, 10000);
+// Initial price load
+refreshPrices();
 </script>
 </body>
 </html>

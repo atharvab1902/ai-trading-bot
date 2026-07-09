@@ -226,16 +226,24 @@ class AlpacaBroker(Broker):
         self._data = StockHistoricalDataClient(api_key, secret_key)
 
     def get_quotes(self, symbols: List[str]) -> Dict[str, Quote]:
-        from alpaca.data.requests import StockLatestQuoteRequest
+        from alpaca.data.requests import StockLatestTradeRequest, StockLatestQuoteRequest
         try:
-            req = StockLatestQuoteRequest(symbol_or_symbols=symbols)
-            raw = self._data.get_stock_latest_quote(req)
+            # Last trade = actual price money exchanged hands at (what you see on Alpaca website)
+            trade_req = StockLatestTradeRequest(symbol_or_symbols=symbols)
+            trades = self._data.get_stock_latest_trade(trade_req)
+            # Quote for bid/ask spread context
+            quote_req = StockLatestQuoteRequest(symbol_or_symbols=symbols)
+            quotes_raw = self._data.get_stock_latest_quote(quote_req)
             result = {}
-            for sym, q in raw.items():
-                bid = float(q.bid_price or 0)
-                ask = float(q.ask_price or 0)
-                ltp = (bid + ask) / 2 if bid > 0 and ask > 0 else max(bid, ask)
-                vol = int(q.bid_size or 0) + int(q.ask_size or 0)
+            for sym in symbols:
+                t = trades.get(sym)
+                q = quotes_raw.get(sym)
+                ltp = float(t.price) if t and t.price else 0.0
+                bid = float(q.bid_price or 0) if q else 0.0
+                ask = float(q.ask_price or 0) if q else 0.0
+                vol = int(t.size or 0) if t else 0
+                if ltp <= 0:
+                    ltp = (bid + ask) / 2 if bid > 0 and ask > 0 else max(bid, ask)
                 result[sym] = Quote(symbol=sym, ltp=ltp, bid=bid, ask=ask,
                                     volume=vol, ts=time.time())
             return result

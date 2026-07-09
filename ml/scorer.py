@@ -277,11 +277,11 @@ class MLScorer:
 
         buf = self._bars.get(symbol, [])
         if len(buf) < 20:
-            return 0.5, False, {}
+            return 0.5, True, {}   # not enough bars yet — neutral, let strategy decide
 
         feats = self._build_features(symbol, buf)
         if feats is None:
-            return 0.5, False, {}
+            return 0.5, True, {}   # feature build failed — neutral, let strategy decide
 
         # Inject real context features (override the 0.5/0.0 stubs from _build_features)
         feats = feats.copy()

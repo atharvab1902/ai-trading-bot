@@ -683,6 +683,11 @@ def main():
 
             # Resolve any blocked signals whose 30-min window has passed
             current_prices = {s: q.ltp for s, q in quotes.items() if q.ltp > 0}
+            try:
+                _qfile = REPO_ROOT / "data" / f"live_quotes_{args.account}.json"
+                _qfile.write_text(json.dumps(current_prices))
+            except Exception:
+                pass
             resolved = db.resolve_blocked_signals(args.account, current_prices)
             for r in resolved:
                 outcome = f"{r['hit']} pnl={r['pnl_pct']:+.2f}%"
@@ -980,12 +985,10 @@ def main():
                                  f"counter-trend (avg_move={avg_move_pct:+.2f}%)")
 
                 # Filter 2 — Stock character filters based on bars_above_vwap.
-                # 160-trade analysis:
-                #   BUY  + bars_above < 45%     → 31% WR (54 trades) — stock downtrending, skip
-                #   SELL + bars_above 30-55%    → 0%  WR (12 trades) — no conviction zone, skip
-                #   SELL + bars_above <30% or >55% → 48-57% WR — allowed
-                if ml_ok:
-                    bars_above = ml_features.get("bars_above_vwap_pct", 50) if ml_features else 50
+                # Only applies when ML features are available (model loaded + enough bars).
+                # Skipped when use_ml=false or model not yet trained.
+                if ml_ok and ml_features:
+                    bars_above = ml_features.get("bars_above_vwap_pct", 50)
                     if sig.action == "BUY" and bars_above < 45:
                         ml_ok = False
                         log.info(f"VWAP-BIAS BLOCKED | {sym} BUY "
