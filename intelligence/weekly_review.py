@@ -232,7 +232,50 @@ Reply with ONLY valid JSON:
 }}"""
 
 
-def _send_telegram(account: str, proposals: list, summary: str, out_path: Path):
+# These are the only params that can NEVER be auto-applied, no matter what agents say.
+_HARD_BLOCKED_PATHS = {
+    "mode",
+    "daily_loss_pct",
+    "max_positions",
+    "capital",
+    "max_position_size",
+    "max_position_size_inr",
+}
+
+
+def _apply_cleared_proposals(account: str, proposals: list, cfg: dict) -> list[str]:
+    """Auto-apply every cleared proposal except hard-blocked params."""
+    applied = []
+    cfg_path = REPO_ROOT / "config" / "accounts" / f"{account}.yaml"
+
+    for prop in proposals:
+        param_path = prop.get("param_path", "")
+        # Block any proposal touching hard-protected params
+        leaf = param_path.split(".")[-1]
+        if leaf in _HARD_BLOCKED_PATHS or param_path in _HARD_BLOCKED_PATHS:
+            prop["skip_reason"] = "hard-protected param — needs human decision"
+            continue
+
+        parts = param_path.split(".")
+        node = cfg
+        try:
+            for part in parts[:-1]:
+                node = node[part]
+            old_val = node[parts[-1]]
+            node[parts[-1]] = prop["proposed_value"]
+            applied.append(f"{param_path}: {old_val} → {prop['proposed_value']}")
+            prop["applied"] = True
+        except (KeyError, TypeError) as e:
+            prop["skip_reason"] = f"path not found: {e}"
+
+    if applied:
+        with open(cfg_path, "w") as f:
+            yaml.dump(cfg, f, default_flow_style=False, allow_unicode=True)
+
+    return applied
+
+
+def _send_telegram(account: str, proposals: list, summary: str, applied: list, out_path: Path):
     import os, urllib.request
     token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
     chat = os.environ.get("TELEGRAM_CHAT_ID", "")
@@ -243,15 +286,15 @@ def _send_telegram(account: str, proposals: list, summary: str, out_path: Path):
         msg = f"📊 *Weekly Review — {account}*\nNo proposals survived review this week. Keep trading."
     else:
         prop_lines = "\n".join(
-            f"• {p.get('title', p.get('param_path', '?'))}: "
+            f"{'✅' if p.get('applied') else '⏭'} {p.get('title', p.get('param_path', '?'))}: "
             f"{p.get('current_value')} → {p.get('proposed_value')}"
+            f"{' (skipped: ' + p.get('skip_reason','') + ')' if p.get('skip_reason') else ''}"
             for p in proposals
         )
         msg = (
             f"📊 *Weekly Review — {account}*\n"
             f"{summary}\n\n"
-            f"*Proposals cleared ({len(proposals)}):*\n{prop_lines}\n\n"
-            f"_Review in dashboard to apply. File: {out_path.name}_"
+            f"*Proposals ({len(proposals)} cleared, {len(applied)} applied):*\n{prop_lines}"
         )
 
     payload = json.dumps({"chat_id": chat, "text": msg, "parse_mode": "Markdown"}).encode()
@@ -355,18 +398,29 @@ def run(account: str) -> dict | None:
 
     print(f"  Risk officer cleared {len(final_proposals)}/{len(accepted_proposals)}")
 
+    # ── Auto-apply everything that cleared all 3 agents ───────────────────────
+    applied = []
+    if final_proposals:
+        print("\nAuto-applying cleared proposals...")
+        applied = _apply_cleared_proposals(account, final_proposals, cfg)
+        for a in applied:
+            print(f"  Applied: {a}")
+        skipped = [p for p in final_proposals if p.get("skip_reason")]
+        for s in skipped:
+            print(f"  Skipped (hard-protected): {s.get('param_path')}")
+
     # ── Save + Notify ─────────────────────────────────────────────────────────
     result = {
         "account": account,
         "date": date.today().isoformat(),
         "thesis": researcher_out.get("thesis", ""),
         "proposals": final_proposals,
+        "applied": applied,
         "all_proposals_with_verdicts": [
             {**p, "verdict": verdicts.get(p.get("id", ""), {}).get("verdict", "NOT_REVIEWED")}
             for p in researcher_out["proposals"]
         ],
-        "status": "PROPOSALS_READY" if final_proposals else "ALL_BLOCKED",
-        "pending_human_approval": True,
+        "status": "APPLIED" if applied else ("CLEARED_NOT_APPLIED" if final_proposals else "ALL_BLOCKED"),
     }
 
     out_path.write_text(json.dumps(result, indent=2))
@@ -378,18 +432,19 @@ def run(account: str) -> dict | None:
         jf.write(f"\n## Weekly Review — {date.today().isoformat()} ({account})\n")
         jf.write(f"**Thesis:** {result['thesis']}\n\n")
         if final_proposals:
-            jf.write("**Cleared proposals (pending human approval):**\n")
+            jf.write(f"**Auto-applied ({len(applied)}/{len(final_proposals)}):**\n")
             for p in final_proposals:
+                tag = "✅ APPLIED" if p.get("applied") else f"⏭ SKIPPED ({p.get('skip_reason', '')})"
                 jf.write(
                     f"- [{p.get('id')}] `{p.get('param_path')}`: "
-                    f"{p.get('current_value')} → {p.get('proposed_value')} — "
-                    f"_{p.get('hypothesis', '')}_\n"
+                    f"{p.get('current_value')} → {p.get('proposed_value')} {tag}\n"
+                    f"  _{p.get('hypothesis', '')}_\n"
                 )
         else:
             jf.write("No proposals cleared this week.\n")
         jf.write("\n---\n")
 
-    _send_telegram(account, final_proposals, result["thesis"], out_path)
+    _send_telegram(account, final_proposals, result["thesis"], applied, out_path)
     return result
 
 
