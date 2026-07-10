@@ -115,8 +115,8 @@ class DhanBroker(Broker):
     """Real Dhan integration using dhanhq SDK."""
 
     def __init__(self, client_id: str, access_token: str):
-        from dhanhq import dhanhq
-        self.client = dhanhq(client_id, access_token)
+        from dhanhq import dhanhq, DhanContext
+        self.client = dhanhq(DhanContext(client_id, access_token))
 
     def _security_id(self, symbol: str) -> int:
         sid = NSE_SECURITY_IDS.get(symbol.upper())
