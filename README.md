@@ -41,13 +41,15 @@ git clone https://github.com/atharvab1902/ai-trading-bot.git
 cd ai-trading-bot
 ```
 
-### 2. Create your `.env` file
+### 2. Start
 
 ```bash
-cp .env.example .env
+docker compose up -d
 ```
 
-Open `.env` and fill in your keys:
+### 3. Open the dashboard and add your keys
+
+Go to **http://localhost:5000** → **Settings** and paste your API keys there. No need to touch any files.
 
 | Key | Where to get it |
 |---|---|
@@ -58,6 +60,10 @@ Open `.env` and fill in your keys:
 | `PERPLEXITY_API_KEY` | [perplexity.ai](https://www.perplexity.ai/settings/api) |
 
 > Leave any key blank if you don't have it — the bot runs without it (Dhan/Alpaca required for the respective bot, others optional).
+
+### 4. Start a bot
+
+Back on the dashboard home page, click **▶ Start Bot** for India or US. That's it.
 
 ---
 
@@ -82,25 +88,9 @@ After logging in, look at the top-left corner — there's a toggle that says **L
   - `ALPACA_API_KEY` → the key ID (starts with `PK...`)
   - `ALPACA_API_SECRET` → the secret key (shown once, copy it now)
 
-Paste both into your `.env` file.
+Paste both into the Settings page on the dashboard.
 
 > **Note:** Make sure you're on the Paper Trading environment when you generate the keys. Live trading keys are separate and will charge real money.
-
-### 3. Start
-
-```bash
-docker compose up -d
-```
-
-### 4. Open the dashboard
-
-Go to **http://localhost:5000** in your browser.
-
-From there you can:
-- Add / update API keys (Settings page)
-- Start / stop the India or US bot
-- Connect Claude Code via browser OAuth (Settings → Claude Code)
-- View live PnL and recent trades
 
 ---
 
