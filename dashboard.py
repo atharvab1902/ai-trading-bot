@@ -102,9 +102,11 @@ def _pid_file(account: str) -> Path:
 def start_bot(account: str):
     if is_running(account):
         return
+    env = {**os.environ, **dotenv_values(str(REPO_ROOT / ".env"))}
     proc = subprocess.Popen(
         [sys.executable, "scheduler.py", "--account", account],
         cwd=REPO_ROOT,
+        env=env,
     )
     _procs[account] = proc
     _pid_file(account).write_text(str(proc.pid))
