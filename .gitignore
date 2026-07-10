@@ -30,6 +30,9 @@ data/vol_baseline_*.json
 trades.db
 ml/model.pkl
 
+# ML models — tracked so collaborators start with a working model
+# Only the repo owner should push these to avoid conflicts
+
 # Daily runtime dumps (auto-regenerated each session)
 data/scorer_bars_*.json
 data/premarket_*.json
