@@ -41,13 +41,21 @@ git clone https://github.com/atharvab1902/ai-trading-bot.git
 cd ai-trading-bot
 ```
 
-### 2. Start
+### 2. Create your `.env` file
+
+```bash
+cp .env.example .env
+```
+
+This creates a blank env file. You'll fill in the actual keys from the dashboard in the next step.
+
+### 3. Start
 
 ```bash
 docker compose up -d
 ```
 
-### 3. Open the dashboard and add your keys
+### 4. Open the dashboard and add your keys
 
 Go to **http://localhost:5000** → **Settings** and paste your API keys there. No need to touch any files.
 
@@ -61,7 +69,7 @@ Go to **http://localhost:5000** → **Settings** and paste your API keys there. 
 
 > Leave any key blank if you don't have it — the bot runs without it (Dhan/Alpaca required for the respective bot, others optional).
 
-### 4. Start a bot
+### 5. Start a bot
 
 Back on the dashboard home page, click **▶ Start Bot** for India or US. That's it.
 
