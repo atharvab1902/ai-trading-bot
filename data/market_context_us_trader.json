@@ -1,15 +1,13 @@
 {
-  "ts": "2026-07-07T22:10:33.589311+05:30",
-  "global_bias": "neutral",
+  "ts": "2026-07-10T22:22:51.898186+05:30",
+  "global_bias": "risk_on",
   "sentiments": {
     "AAPL": 1,
-    "TSLA": 0,
     "AMD": 1,
-    "MSFT": 1,
-    "NVDA": 1,
-    "SPY": 0,
+    "TSLA": 0,
+    "SPY": 1,
     "QQQ": 0
   },
-  "vix": 15.85,
+  "vix": 15.38,
   "vix_regime": "NORMAL"
 }

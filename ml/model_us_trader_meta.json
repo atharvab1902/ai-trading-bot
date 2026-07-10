@@ -1,10 +1,10 @@
 {
-  "trained_at": "2026-07-08T14:34:33.523451-04:00",
+  "trained_at": "2026-07-09T16:45:33.827672-04:00",
   "timezone": "ET",
   "market": "US",
   "account": "us_trader",
   "model_type": "dual",
-  "n_trades": 10,
+  "n_trades": 14,
   "feature_cols": [
     "gap_pct",
     "vol_surge_5d",
@@ -29,14 +29,14 @@
   "threshold": 0.25,
   "open_threshold": 0.25,
   "mid_threshold": 0.25,
-  "deployed": true,
+  "deployed": false,
   "metrics": {
     "short": {
-      "win_rate": 0.333,
-      "sharpe": -12.58,
-      "signals": 6,
-      "precision": 0.667,
-      "n_trades": 10
+      "win_rate": 0.143,
+      "sharpe": -11.342,
+      "signals": 7,
+      "precision": 0.714,
+      "n_trades": 14
     }
   }
 }

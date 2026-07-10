@@ -2955,3 +2955,95 @@ Feedback signals used: 4206
 ## US ML Retrain — 2026-07-08 14:34 ET | account=us_trader
 Trades used: 10 | Deployed: YES
   short: win=33.3% sharpe=-12.58 signals=6 precision=66.7%
+
+## 2026-07-09 (tester)
+**Strategy:** none
+**Trades:** 0 (0W / 0L)
+**PnL:** +Rs0.00
+
+**Market:** Nifty 50 closed sharply lower at **23,882.05**, down **2.12%**, breaking below its key support of 24,200 amid profit-booking and global cues like the Fed’s unchanged rate decision [1][4][5]. Major losers included **Jio Financial Services** (–5.38%), **Shriram Finance** (–4.91%), and **Maruti Suzuki** (–4.04%), while top gainers were **ONGC**, **Bajaj Auto**, and **Coal India** [3]. The big news driving the market was the **Fed leaving rates unchanged** and hinting at a potential rate hike later this year, alongside renewed **U.S.–Iran MoU tensions** [2].
+
+**Context:** Global bias was RISK_OFF. Skipped event-risk stocks: DIVISLAB, UNIONBANK.
+
+**Best trade:** none
+**Worst trade:** none
+
+**Edge check:** No trades today — no signals fired.
+
+> ⚠️ #stopped-out appears 11x in last 20 sessions. Researcher should review stoploss width.
+
+**Tags:** 
+
+---
+---
+## ML Retrain — 2026-07-09 22:30 IST (IST)
+Feedback signals used: 4619
+
+### OPEN window | deployed=YES | threshold 0.300 -> 0.300
+  long/sharpe: -13.039 -> -13.056
+  long/win_rate: 0.303 -> 0.303
+  long/n_signals: 82314 -> 82137
+  short/sharpe: -14.974 -> -14.968
+  short/win_rate: 0.304 -> 0.304
+  short/n_signals: 77126 -> 77177
+
+### MID window | deployed=YES | threshold 0.250 -> 0.250
+  long/sharpe: -22.031 -> -22.031
+  long/win_rate: 0.197 -> 0.197
+  long/n_signals: 439582 -> 439618
+  short/sharpe: -20.431 -> -20.429
+  short/win_rate: 0.216 -> 0.216
+  short/n_signals: 437976 -> 438000
+
+### Feature importance
+  OPEN_LONG — top 5 features:
+    atr14_pct                 0.187
+    is_first_30min            0.152
+    vol_surge_5d              0.098
+    orb_width_pct             0.076
+    mom_15m_pct               0.056
+
+  OPEN_SHORT — top 5 features:
+    atr14_pct                 0.283
+    is_first_30min            0.192
+    time_bucket               0.091
+    orb_width_pct             0.057
+    mom_15m_pct               0.047
+
+  MID_LONG — top 5 features:
+    atr14_pct                 0.474
+    mom_30m_pct               0.072
+    mom_15m_pct               0.064
+    orb_width_pct             0.058
+    time_bucket               0.044
+
+  MID_SHORT — top 5 features:
+    atr14_pct                 0.472
+    time_bucket               0.089
+    is_last_hour              0.059
+    vwap_dev_pct              0.050
+    mom_30m_pct               0.049
+
+## 2026-07-10 (us_trader)
+**Strategy:** vwap
+**Trades:** 5 (2W / 3L)
+**PnL:** +Rs30.84
+
+**Market:** The Nifty 50 closed at **23,882**, down **2.12%**, with technical indicators signaling a **Strong Sell** amid heavy profit booking [3][4]. Major movers included **Bajaj Finance** (-3.08%), **Reliance Industries** (-2.48%), and **ICICI Bank** (-2.41%), all trending lower [3]. Key news driving the downturn includes the **Fed's unchanged rate decision** with a hint of a potential 2026 hike, alongside a U.S.-Iran **MoU** signed the previous night [2].
+
+**Context:** 
+
+**Best trade:** AMD +Rs117.94 (TARGET)
+**Worst trade:** TSLA Rs-49.81 (STOPLOSS)
+
+**Edge check:** Mixed results — sample too small to conclude. Keep logging.
+
+> ⚠️ #stopped-out appears 8x in last 20 sessions. Researcher should review stoploss width.
+
+**Tags:** #amd #clean-exit #loss #qqq #stopped-out #tsla #vwap #win
+
+---
+---
+## US ML Retrain — 2026-07-09 16:45 ET | account=us_trader
+Trades used: 14 | Deployed: NO (kept old)
+  short: win=14.3% sharpe=-11.34 signals=7 precision=71.4%

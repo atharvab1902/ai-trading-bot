@@ -1,8 +1,8 @@
 {
-  "regime": "VOLATILE",
-  "avg_move_pct": 0.043,
-  "reason": "High intraday volatility: avg_tick=0.0500% | VIX=15.8",
-  "ts": "2026-07-08T01:27:59.433466+05:30",
+  "regime": "CHOPPY",
+  "avg_move_pct": 0.062,
+  "reason": "Mixed signals: 2up/1dn/2flat | VIX=15.4",
+  "ts": "2026-07-11T00:49:26.697051+05:30",
   "strategies": {
     "orb": {
       "active": false
@@ -14,6 +14,6 @@
       "active": true,
       "allow_short": true
     },
-    "position_size_multiplier": 0.5
+    "position_size_multiplier": 1.0
   }
 }
