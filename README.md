@@ -52,12 +52,39 @@ Open `.env` and fill in your keys:
 | Key | Where to get it |
 |---|---|
 | `DHAN_CLIENT_ID` + `DHAN_ACCESS_TOKEN` | [dhanhq.co](https://dhanhq.co) → My Profile → API |
-| `ALPACA_API_KEY` + `ALPACA_API_SECRET` | [alpaca.markets](https://alpaca.markets) → Paper Trading → API Keys |
+| `ALPACA_API_KEY` + `ALPACA_API_SECRET` | See instructions below |
 | `TELEGRAM_BOT_TOKEN` | Telegram → @BotFather → /newbot |
 | `TELEGRAM_CHAT_ID` | Telegram → @userinfobot |
 | `PERPLEXITY_API_KEY` | [perplexity.ai](https://www.perplexity.ai/settings/api) |
 
 > Leave any key blank if you don't have it — the bot runs without it (Dhan/Alpaca required for the respective bot, others optional).
+
+---
+
+### Getting your Alpaca paper trading keys
+
+The US bot trades on Alpaca's paper trading environment — no real money, no risk.
+
+**1. Create a free account**
+
+Go to [https://app.alpaca.markets/signup](https://app.alpaca.markets/signup) and sign up. No credit card needed.
+
+**2. Switch to Paper Trading**
+
+After logging in, look at the top-left corner — there's a toggle that says **Live Trading**. Click it and switch to **Paper Trading**. Everything from here on is simulated.
+
+**3. Get your API keys**
+
+- Click your name / account icon (top right)
+- Go to **Overview** → scroll down to **Your API Keys**
+- Click **Generate New Key**
+- Copy both values immediately — the secret is only shown once:
+  - `ALPACA_API_KEY` → the key ID (starts with `PK...`)
+  - `ALPACA_API_SECRET` → the secret key (shown once, copy it now)
+
+Paste both into your `.env` file.
+
+> **Note:** Make sure you're on the Paper Trading environment when you generate the keys. Live trading keys are separate and will charge real money.
 
 ### 3. Start
 
