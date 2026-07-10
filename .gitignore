@@ -20,6 +20,15 @@ data/backups/
 data/live_quotes_*.json
 data/scheduler_*.pid
 data/claude-home/
+data/regime.json
+data/market_context.json
+data/regime_*.json
+data/market_context_*.json
+data/vol_baseline_*.json
+
+# Old root-level leftovers (real files are in data/ and ml/)
+trades.db
+ml/model.pkl
 
 # Daily runtime dumps (auto-regenerated each session)
 data/scorer_bars_*.json
